@@ -1,0 +1,380 @@
+//
+//  WindTileServer.m
+//  WeatherTileDemo
+//
+
+#import "WindTileServer.h"
+#import "WindyWindTileDecoder.h"
+#import "WindSpeedColorizer.h"
+#import "WindyForecastResolver.h"
+#import "WindTileDiskCache.h"
+#import <GCDWebServer/GCDWebServer.h>
+#import <GCDWebServer/GCDWebServerDataResponse.h>
+#import <UIKit/UIKit.h>
+
+@interface WindTileServer ()
+
+@property (nonatomic, strong) GCDWebServer *server;
+@property (nonatomic, strong) NSCache<NSString *, NSData *> *memoryCache;
+@property (nonatomic, strong) WindTileDiskCache *diskCache;
+@property (nonatomic, strong) WindyForecastResolver *forecastResolver;
+@property (nonatomic, strong) NSData *transparentTile;
+@property (nonatomic, strong) dispatch_queue_t workQueue;
+@property (nonatomic, copy) NSString *currentForecastKey;
+@property (nonatomic, copy) NSString *currentBaseUrl;
+
+@end
+
+@implementation WindTileServer
+
+static const NSInteger kMaxDataZoom = 4;
+static const NSInteger kMemoryCacheLimit = 64;
+
+- (instancetype)initWithCacheDirectory:(NSString *)cacheDirectory {
+    if (self = [super init]) {
+        _server = [[GCDWebServer alloc] init];
+        _memoryCache = [[NSCache alloc] init];
+        _memoryCache.countLimit = kMemoryCacheLimit;
+        _diskCache = [[WindTileDiskCache alloc] initWithCacheDirectory:cacheDirectory 
+                                                        renderVersion:@"windy-v2-contrast-alpha217"];
+        _forecastResolver = [[WindyForecastResolver alloc] init];
+        _workQueue = dispatch_queue_create("com.weathertile.server", DISPATCH_QUEUE_CONCURRENT);
+        _transparentTile = [self createTransparentTile];
+    }
+    return self;
+}
+
+- (NSString *)start {
+    __weak typeof(self) weakSelf = self;
+    
+    [self.server addDefaultHandlerForMethod:@"GET"
+                               requestClass:[GCDWebServerRequest class]
+                               processBlock:^GCDWebServerResponse * _Nullable(__kindof GCDWebServerRequest * _Nonnull request) {
+        return [weakSelf handleRequest:request];
+    }];
+    
+    NSError *error = nil;
+    NSDictionary *options = @{
+        GCDWebServerOption_BindToLocalhost: @YES,
+        GCDWebServerOption_Port: @0,
+        GCDWebServerOption_AutomaticallySuspendInBackground: @NO
+    };
+    
+    if (![self.server startWithOptions:options error:&error]) {
+        NSLog(@"[WindTileServer] 启动失败: %@", error);
+        return nil;
+    }
+    
+    NSUInteger port = self.server.port;
+    _tileTemplate = [NSString stringWithFormat:@"http://127.0.0.1:%lu/wind/{z}/{x}/{y}.png", (unsigned long)port];
+    
+    // 预热预报时次
+    dispatch_async(self.workQueue, ^{
+        [weakSelf prepareForecast];
+    });
+    
+    NSLog(@"[WindTileServer] 启动成功，监听端口 %lu", (unsigned long)port);
+    return _tileTemplate;
+}
+
+- (void)stop {
+    [self.server stop];
+    [self.memoryCache removeAllObjects];
+    NSLog(@"[WindTileServer] 已停止");
+}
+
+- (GCDWebServerDataResponse *)handleRequest:(GCDWebServerRequest *)request {
+    NSString *path = request.path;
+    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"/wind/(\\d+)/(-?\\d+)/(\\d+)\\.png"
+                                                                            options:0
+                                                                              error:nil];
+    NSTextCheckingResult *match = [regex firstMatchInString:path options:0 range:NSMakeRange(0, path.length)];
+    
+    if (!match) {
+        return [GCDWebServerDataResponse responseWithData:self.transparentTile contentType:@"image/png"];
+    }
+    
+    NSInteger z = [[path substringWithRange:[match rangeAtIndex:1]] integerValue];
+    NSInteger x = [[path substringWithRange:[match rangeAtIndex:2]] integerValue];
+    NSInteger y = [[path substringWithRange:[match rangeAtIndex:3]] integerValue];
+    
+    NSData *tileData = [self tileForZ:z x:x y:y];
+    return [GCDWebServerDataResponse responseWithData:tileData contentType:@"image/png"];
+}
+
+- (NSData *)tileForZ:(NSInteger)z x:(NSInteger)x y:(NSInteger)y {
+    NSLog(@"[DEBUG] ===== Tile request: z=%ld x=%ld y=%ld =====", (long)z, (long)x, (long)y);
+    
+    if (z < 0 || z > kMaxDataZoom) {
+        NSLog(@"[DEBUG] Zoom %ld out of range [0-%ld], returning transparent", (long)z, (long)kMaxDataZoom);
+        return self.transparentTile;
+    }
+    
+    NSInteger dimension = 1 << z;
+    if (y < 0 || y >= dimension) {
+        NSLog(@"[DEBUG] Y=%ld out of range [0-%ld], returning transparent", (long)y, (long)dimension - 1);
+        return self.transparentTile;
+    }
+    
+    // X 轴循环
+    NSInteger wrappedX = ((x % dimension) + dimension) % dimension;
+    if (wrappedX != x) {
+        NSLog(@"[DEBUG] X wrapped: %ld -> %ld", (long)x, (long)wrappedX);
+    }
+    
+    @try {
+        [self prepareForecast];
+        return [self tileForForecastZ:z x:wrappedX y:y];
+    } @catch (NSException *exception) {
+        NSLog(@"[WindTileServer] 瓦片 %ld/%ld/%ld 失败: %@", (long)z, (long)wrappedX, (long)y, exception.reason);
+        return self.transparentTile;
+    }
+}
+
+- (void)prepareForecast {
+    if (self.currentBaseUrl && self.currentForecastKey) {
+        return;
+    }
+    
+    @synchronized (self) {
+        if (self.currentBaseUrl && self.currentForecastKey) {
+            return;
+        }
+        
+        NSString *baseUrl = [self.forecastResolver resolveBaseUrl];
+        NSString *forecastKey = [WindTileDiskCache forecastKeyFromBaseUrl:baseUrl];
+        
+        [self.diskCache activateForecast:forecastKey];
+        
+        self.currentBaseUrl = baseUrl;
+        self.currentForecastKey = forecastKey;
+        
+        NSLog(@"[WindTileServer] 激活预报缓存: %@", forecastKey);
+    }
+}
+
+- (NSData *)tileForForecastZ:(NSInteger)z x:(NSInteger)x y:(NSInteger)y {
+    NSString *coordinateKey = [NSString stringWithFormat:@"%ld/%ld/%ld", (long)z, (long)x, (long)y];
+    NSString *memoryKey = [NSString stringWithFormat:@"%@/%@", self.currentForecastKey, coordinateKey];
+    
+    // 1. 查内存缓存
+    NSData *cached = [self.memoryCache objectForKey:memoryKey];
+    if (cached) {
+        return cached;
+    }
+    
+    // 2. 查磁盘缓存
+    NSData *diskData = [self.diskCache readTileForForecast:self.currentForecastKey z:z x:x y:y];
+    if (diskData) {
+        [self.memoryCache setObject:diskData forKey:memoryKey];
+        NSLog(@"[WindTileServer] 磁盘缓存命中 %@ (%lu bytes)", coordinateKey, (unsigned long)diskData.length);
+        return diskData;
+    }
+    
+    // 3. 远程下载 + 渲染
+    NSString *remoteUrl = [NSString stringWithFormat:@"%@/%@/wind-surface.jpg", self.currentBaseUrl, coordinateKey];
+    NSData *pngData = [self fetchAndRender:remoteUrl];
+    
+    [self.diskCache writeTile:pngData forForecast:self.currentForecastKey z:z x:x y:y];
+    [self.memoryCache setObject:pngData forKey:memoryKey];
+    
+    NSLog(@"[WindTileServer] 下载瓦片 %@ (%lu bytes)", coordinateKey, (unsigned long)pngData.length);
+    return pngData;
+}
+
+- (NSData *)fetchAndRender:(NSString *)urlString {
+    NSLog(@"[DEBUG] Fetching from URL: %@", urlString);
+    
+    // 下载 Windy 编码 JPEG
+    NSURL *url = [NSURL URLWithString:urlString];
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url
+                                                           cachePolicy:NSURLRequestReloadIgnoringLocalCacheData
+                                                       timeoutInterval:15.0];
+    [request setValue:@"image/jpeg" forHTTPHeaderField:@"Accept"];
+    [request setValue:@"WeatherTileDemo/1.0" forHTTPHeaderField:@"User-Agent"];
+    
+    NSError *error = nil;
+    NSHTTPURLResponse *response = nil;
+    NSData *jpegData = [NSURLConnection sendSynchronousRequest:request
+                                             returningResponse:&response
+                                                         error:&error];
+    
+    if (error || response.statusCode != 200) {
+        NSLog(@"[ERROR] HTTP %ld for URL: %@", (long)response.statusCode, urlString);
+        @throw [NSException exceptionWithName:@"NetworkError"
+                                       reason:[NSString stringWithFormat:@"HTTP %ld", (long)response.statusCode]
+                                     userInfo:nil];
+    }
+    
+    // 解码 JPEG
+    UIImage *jpegImage = [UIImage imageWithData:jpegData];
+    if (!jpegImage) {
+        @throw [NSException exceptionWithName:@"DecodeError" reason:@"Invalid JPEG" userInfo:nil];
+    }
+    
+    CGImageRef cgImage = jpegImage.CGImage;
+    NSUInteger width = CGImageGetWidth(cgImage);
+    NSUInteger height = CGImageGetHeight(cgImage);
+    
+    NSLog(@"[DEBUG] JPEG size: %lux%lu", (unsigned long)width, (unsigned long)height);
+    
+    // ✅ 修复：等效于 Android 的 Bitmap.getPixels() 方式
+    // 使用 CGBitmapContextCreate 创建标准 ARGB 缓冲，让 iOS 自动转换像素格式
+    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+    uint32_t *pixels = (uint32_t *)malloc(width * height * sizeof(uint32_t));
+    
+    CGContextRef bitmapContext = CGBitmapContextCreate(
+        pixels,
+        width,
+        height,
+        8,
+        width * 4,
+        colorSpace,
+        kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big  // ARGB 标准格式
+    );
+    
+    // 在标准 ARGB 缓冲上绘制 CGImage，iOS 自动转换像素
+    
+    
+    // 翻转坐标系，使图像正确方向（头部在顶部）
+    CGContextTranslateCTM(bitmapContext, 0, height);
+    CGContextScaleCTM(bitmapContext, 1.0, -1.0);
+    CGContextDrawImage(bitmapContext, CGRectMake(0, 0, width, height), cgImage);
+    CGContextRelease(bitmapContext);
+    CGColorSpaceRelease(colorSpace);
+    
+    NSLog(@"[DEBUG] Pixel buffer created via CGBitmapContext (ARGB standard format)");
+    NSLog(@"[DEBUG] First 5 pixels:");
+    for (int i = 0; i < 5; i++) {
+        uint32_t p = pixels[i];
+        NSLog(@"  [%d] = 0x%08X (R=%d G=%d B=%d A=%d)", 
+              i, p,
+              (p >> 16) & 0xFF,
+              (p >> 8) & 0xFF,
+              p & 0xFF,
+              (p >> 24) & 0xFF);
+    }
+    
+    // 调试：验证数据区 - 打印第 10 行的前 5 个像素
+    NSLog(@"[DEBUG] Row 9 (data area sample):");
+    for (int i = 0; i < 5; i++) {
+        uint32_t p = pixels[9 * width + i];
+        NSLog(@"  [9,%d] = 0x%08X (R=%d G=%d B=%d)", 
+              i, p,
+              (p >> 16) & 0xFF,
+              (p >> 8) & 0xFF,
+              p & 0xFF);
+    }
+    
+    // 调试：验证头部 - 打印第 4 行的前 5 个像素
+    NSLog(@"[DEBUG] Image dimensions: %lux%lu", (unsigned long)width, (unsigned long)height);
+    NSLog(@"[DEBUG] Expected header at: row 4, starting from index %ld", (long)(width * 4));
+    NSLog(@"[DEBUG] Row 4 (header area):");
+    for (int i = 0; i < 5; i++) {
+        uint32_t p = pixels[4 * width + i];
+        NSLog(@"  [4,%d] = 0x%08X (R=%d G=%d B=%d)", 
+              i, p,
+              (p >> 16) & 0xFF,
+              (p >> 8) & 0xFF,
+              p & 0xFF);
+    }
+    
+    // 调试：验证 Y 轴方向 - 打印第 5 行（头部应该在这里）
+    NSLog(@"[DEBUG] Row 4 (header should be here):");
+    for (int i = 0; i < 5; i++) {
+        uint32_t p = pixels[4 * width + i];
+        NSLog(@"  [4,%d] = 0x%08X", i, p);
+    }
+    
+    // 调试：打印第 9 行（数据区应该从这里开始）
+    NSLog(@"[DEBUG] Row 8 (data should start here):");
+    for (int i = 0; i < 5; i++) {
+        uint32_t p = pixels[8 * width + i];
+        NSLog(@"  [8,%d] = 0x%08X", i, p);
+    }
+    
+    // 调试：打印最后一行
+    NSLog(@"[DEBUG] Last row (should be data):");
+    for (int i = 0; i < 5; i++) {
+        uint32_t p = pixels[(height - 1) * width + i];
+        NSLog(@"  [%lu,%d] = 0x%08X", (unsigned long)(height - 1), i, p);
+    }
+    
+    // ⭐ 临时：直接使用原始颜色，跳过头部8行
+    NSLog(@"[DEBUG] ========================================");
+    NSLog(@"[DEBUG] 🎨🎨🎨 使用原始颜色（跳过头部8行）🎨🎨🎨");
+    NSLog(@"[DEBUG] ========================================");
+    
+    // 创建256x256的输出（跳过前8行，考虑Y轴翻转）
+    uint32_t *coloredPixels = (uint32_t *)malloc(256 * 256 * sizeof(uint32_t));
+    for (int y = 0; y < 256; y++) {
+        for (int x = 0; x < 256; x++) {
+            // 因为 Y 轴翻转，从底部开始读取（跳过顶部8行和底部1行）
+            // 原始 JPEG row 8 -> 翻转后在 pixels[(265-8-1)*width]
+            // 原始 JPEG row 263 -> 翻转后在 pixels[(265-263-1)*width]
+            NSInteger srcRow = height - 8 - y - 1;
+            uint32_t srcPixel = pixels[srcRow * width + x];
+            coloredPixels[y * 256 + x] = srcPixel;
+        }
+    }
+    
+    NSLog(@"[DEBUG] ✂️ 裁剪计算：height=%ld, 读取 srcRow 范围: %ld ~ %ld",
+          (long)height, (long)(height - 8 - 0 - 1), (long)(height - 8 - 255 - 1));
+    NSLog(@"[DEBUG] 期望: srcRow=256 对应原始 row 8, srcRow=1 对应原始 row 263");
+    
+    // 调试：验证裁剪是否正确
+    NSLog(@"[DEBUG] 输出瓦片前5个像素（应该来自原始 JPEG 的 row 8）:");
+    for (int i = 0; i < 5; i++) {
+        uint32_t p = coloredPixels[i];
+        uint8_t r = (p >> 16) & 0xFF;
+        uint8_t g = (p >> 8) & 0xFF;
+        uint8_t b = p & 0xFF;
+        NSLog(@"  Output[0,%d] = 0x%08X (R=%d G=%d B=%d)", i, p, r, g, b);
+    }
+    
+    free(pixels);
+    
+    // 原始的解码和着色代码（已注释）
+    // WindField *field = [WindyWindTileDecoder decodePixels:pixels width:width height:height];
+    // free(pixels);
+    // uint32_t *coloredPixels = [WindSpeedColorizer colorizeField:field];
+    
+    // 调试：打印着色后的样本像素
+    NSLog(@"[DEBUG] Colored sample pixels:");
+    for (int i = 0; i < 5; i++) {
+        uint32_t p = coloredPixels[i];
+        NSLog(@"  [%d] = 0x%08X", i, p);
+    }
+    
+    // 生成 PNG
+    CGColorSpaceRef colorSpacePNG = CGColorSpaceCreateDeviceRGB();
+    CGContextRef outputContext = CGBitmapContextCreate(coloredPixels, 256, 256, 8,
+                                                       256 * 4, colorSpacePNG,
+                                                       kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
+    
+    CGImageRef outputImage = CGBitmapContextCreateImage(outputContext);
+    UIImage *pngImage = [UIImage imageWithCGImage:outputImage];
+    NSData *pngData = UIImagePNGRepresentation(pngImage);
+    
+    CGImageRelease(outputImage);
+    CGContextRelease(outputContext);
+    CGColorSpaceRelease(colorSpacePNG);
+    free(coloredPixels);
+//    free(field->u);
+//    free(field->v);
+//    free(field);
+    
+    NSLog(@"[DEBUG] PNG size: %lu bytes", (unsigned long)pngData.length);
+    
+    return pngData;
+}
+
+- (NSData *)createTransparentTile {
+    CGSize size = CGSizeMake(256, 256);
+    UIGraphicsBeginImageContextWithOptions(size, NO, 1.0);
+    UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return UIImagePNGRepresentation(image);
+}
+
+@end

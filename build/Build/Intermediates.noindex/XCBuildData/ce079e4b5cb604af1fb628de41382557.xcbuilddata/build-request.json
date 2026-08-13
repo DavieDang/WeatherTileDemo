@@ -1,0 +1,64 @@
+{
+  "buildCommand" : {
+    "command" : "build",
+    "skipDependencies" : false,
+    "style" : "buildOnly"
+  },
+  "configuredTargets" : [
+    {
+      "guid" : "adb83b3306eb78e91b9374ed14a00763b45713e2cecb7cc5a21c6be5c110885f"
+    }
+  ],
+  "containerPath" : "/Users/admin/Desktop/AgentFile/WeatherTileDemo/WeatherTileDemo.xcworkspace",
+  "continueBuildingAfterErrors" : false,
+  "dependencyScope" : "workspace",
+  "enableIndexBuildArena" : false,
+  "hideShellScriptEnvironment" : false,
+  "parameters" : {
+    "action" : "build",
+    "activeArchitecture" : "undefined_arch",
+    "activeRunDestination" : {
+      "disableOnlyActiveArch" : true,
+      "platform" : "iphonesimulator",
+      "sdk" : "iphonesimulator26.2",
+      "sdkVariant" : "iphonesimulator",
+      "supportedArchitectures" : [
+        "i386",
+        "x86_64"
+      ],
+      "targetArchitecture" : "undefined_arch"
+    },
+    "arenaInfo" : {
+      "buildIntermediatesPath" : "/Users/admin/Desktop/AgentFile/WeatherTileDemo/build/Build/Intermediates.noindex",
+      "buildProductsPath" : "/Users/admin/Desktop/AgentFile/WeatherTileDemo/build/Build/Products",
+      "derivedDataPath" : "/Users/admin/Desktop/AgentFile/WeatherTileDemo/build",
+      "indexDataStoreFolderPath" : "/Users/admin/Desktop/AgentFile/WeatherTileDemo/build/Index.noindex/DataStore",
+      "indexEnableDataStore" : true,
+      "indexPCHPath" : "/Users/admin/Desktop/AgentFile/WeatherTileDemo/build/Index.noindex/PrecompiledHeaders",
+      "pchPath" : "/Users/admin/Desktop/AgentFile/WeatherTileDemo/build/Build/Intermediates.noindex/PrecompiledHeaders"
+    },
+    "configurationName" : "Debug",
+    "overrides" : {
+      "commandLine" : {
+        "table" : {
+
+        }
+      },
+      "synthesized" : {
+        "table" : {
+          "ACTION" : "build",
+          "ENABLE_PREVIEWS" : "NO",
+          "ENABLE_XOJIT_PREVIEWS" : "YES",
+          "ONLY_ACTIVE_ARCH" : "YES",
+          "TOOLCHAINS" : "com.apple.dt.toolchain.Metal.32023.864 $(inherited)"
+        }
+      }
+    }
+  },
+  "schemeCommand" : "launch",
+  "showNonLoggedProgress" : true,
+  "useDryRun" : false,
+  "useImplicitDependencies" : true,
+  "useLegacyBuildLocations" : false,
+  "useParallelTargets" : true
+}

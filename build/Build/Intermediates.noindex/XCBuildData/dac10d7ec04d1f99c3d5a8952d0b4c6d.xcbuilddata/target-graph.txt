@@ -1,0 +1,9 @@
+Target dependency graph (4 targets)
+Target 'WeatherTileDemo' in project 'WeatherTileDemo'
+➜ Implicit dependency on target 'Pods-WeatherTileDemo' in project 'Pods' via file 'Pods_WeatherTileDemo.framework' in build phase 'Link Binary'
+➜ Implicit dependency on target 'GCDWebServer' in project 'Pods' via options '-framework GCDWebServer' in build setting 'OTHER_LDFLAGS'
+Target 'Pods-WeatherTileDemo' in project 'Pods'
+➜ Explicit dependency on target 'GCDWebServer' in project 'Pods'
+➜ Explicit dependency on target 'MapLibre' in project 'Pods'
+Target 'MapLibre' in project 'Pods' (no dependencies)
+Target 'GCDWebServer' in project 'Pods' (no dependencies)

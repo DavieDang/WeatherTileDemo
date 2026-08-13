@@ -1,0 +1,425 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AA0001 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = AA0002 /* AppDelegate.m */; };
+		AA0003 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = AA0004 /* ViewController.m */; };
+		AA0005 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = AA0006 /* main.m */; };
+		AA0007 /* WindTileServer.m in Sources */ = {isa = PBXBuildFile; fileRef = AA0008 /* WindTileServer.m */; };
+		AA0009 /* WindyWindTileDecoder.m in Sources */ = {isa = PBXBuildFile; fileRef = AA000A /* WindyWindTileDecoder.m */; };
+		AA000B /* WindSpeedColorizer.m in Sources */ = {isa = PBXBuildFile; fileRef = AA000C /* WindSpeedColorizer.m */; };
+		AA000D /* WindyForecastResolver.m in Sources */ = {isa = PBXBuildFile; fileRef = AA000E /* WindyForecastResolver.m */; };
+		AA000F /* WindTileDiskCache.m in Sources */ = {isa = PBXBuildFile; fileRef = AA0010 /* WindTileDiskCache.m */; };
+		AA0011 /* WindRasterLayerRenderer.m in Sources */ = {isa = PBXBuildFile; fileRef = AA0012 /* WindRasterLayerRenderer.m */; };
+		AA0013 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA0014 /* LaunchScreen.storyboard */; };
+		BB0001 /* Pods_WeatherTileDemo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BB0002 /* Pods_WeatherTileDemo.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		AA0002 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		AA0004 /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
+		AA0006 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		AA0008 /* WindTileServer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WindTileServer.m; sourceTree = "<group>"; };
+		AA000A /* WindyWindTileDecoder.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WindyWindTileDecoder.m; sourceTree = "<group>"; };
+		AA000C /* WindSpeedColorizer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WindSpeedColorizer.m; sourceTree = "<group>"; };
+		AA000E /* WindyForecastResolver.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WindyForecastResolver.m; sourceTree = "<group>"; };
+		AA0010 /* WindTileDiskCache.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WindTileDiskCache.m; sourceTree = "<group>"; };
+		AA0012 /* WindRasterLayerRenderer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WindRasterLayerRenderer.m; sourceTree = "<group>"; };
+		AA0014 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		AA0015 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		AA0016 /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
+		AA0017 /* WindTileServer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WindTileServer.h; sourceTree = "<group>"; };
+		AA0018 /* WindyWindTileDecoder.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WindyWindTileDecoder.h; sourceTree = "<group>"; };
+		AA0019 /* WindSpeedColorizer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WindSpeedColorizer.h; sourceTree = "<group>"; };
+		AA001A /* WindyForecastResolver.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WindyForecastResolver.h; sourceTree = "<group>"; };
+		AA001B /* WindTileDiskCache.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WindTileDiskCache.h; sourceTree = "<group>"; };
+		AA001C /* WindRasterLayerRenderer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WindRasterLayerRenderer.h; sourceTree = "<group>"; };
+		AA001D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AA001E /* WeatherTileDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WeatherTileDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BB0002 /* Pods_WeatherTileDemo.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_WeatherTileDemo.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		BB0003 /* Pods-WeatherTileDemo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WeatherTileDemo.debug.xcconfig"; path = "Target Support Files/Pods-WeatherTileDemo/Pods-WeatherTileDemo.debug.xcconfig"; sourceTree = "<group>"; };
+		BB0004 /* Pods-WeatherTileDemo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WeatherTileDemo.release.xcconfig"; path = "Target Support Files/Pods-WeatherTileDemo/Pods-WeatherTileDemo.release.xcconfig"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		AA001F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BB0001 /* Pods_WeatherTileDemo.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		AA0020 = {
+			isa = PBXGroup;
+			children = (
+				AA0021 /* WeatherTileDemo */,
+				AA0022 /* Products */,
+				AA0023 /* Pods */,
+				AA0024 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		AA0021 /* WeatherTileDemo */ = {
+			isa = PBXGroup;
+			children = (
+				AA0015 /* AppDelegate.h */,
+				AA0002 /* AppDelegate.m */,
+				AA0016 /* ViewController.h */,
+				AA0004 /* ViewController.m */,
+				AA0017 /* WindTileServer.h */,
+				AA0008 /* WindTileServer.m */,
+				AA0018 /* WindyWindTileDecoder.h */,
+				AA000A /* WindyWindTileDecoder.m */,
+				AA0019 /* WindSpeedColorizer.h */,
+				AA000C /* WindSpeedColorizer.m */,
+				AA001A /* WindyForecastResolver.h */,
+				AA000E /* WindyForecastResolver.m */,
+				AA001B /* WindTileDiskCache.h */,
+				AA0010 /* WindTileDiskCache.m */,
+				AA001C /* WindRasterLayerRenderer.h */,
+				AA0012 /* WindRasterLayerRenderer.m */,
+				AA0014 /* LaunchScreen.storyboard */,
+				AA001D /* Info.plist */,
+				AA0006 /* main.m */,
+			);
+			path = WeatherTileDemo;
+			sourceTree = "<group>";
+		};
+		AA0022 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AA001E /* WeatherTileDemo.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		AA0023 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				BB0003 /* Pods-WeatherTileDemo.debug.xcconfig */,
+				BB0004 /* Pods-WeatherTileDemo.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		AA0024 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				BB0002 /* Pods_WeatherTileDemo.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AA0025 /* WeatherTileDemo */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA0026 /* Build configuration list for PBXNativeTarget "WeatherTileDemo" */;
+			buildPhases = (
+				BB0005 /* [CP] Check Pods Manifest.lock */,
+				AA0027 /* Sources */,
+				AA001F /* Frameworks */,
+				AA0028 /* Resources */,
+				BB0006 /* [CP] Embed Pods Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = WeatherTileDemo;
+			productName = WeatherTileDemo;
+			productReference = AA001E /* WeatherTileDemo.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AA0029 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					AA0025 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = AA002A /* Build configuration list for PBXProject "WeatherTileDemo" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = AA0020;
+			productRefGroup = AA0022 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AA0025 /* WeatherTileDemo */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AA0028 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA0013 /* LaunchScreen.storyboard in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		BB0005 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-WeatherTileDemo-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		BB0006 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-WeatherTileDemo/Pods-WeatherTileDemo-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			inputPaths = (
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-WeatherTileDemo/Pods-WeatherTileDemo-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-WeatherTileDemo/Pods-WeatherTileDemo-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AA0027 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA0001 /* AppDelegate.m in Sources */,
+				AA0003 /* ViewController.m in Sources */,
+				AA0005 /* main.m in Sources */,
+				AA0007 /* WindTileServer.m in Sources */,
+				AA0009 /* WindyWindTileDecoder.m in Sources */,
+				AA000B /* WindSpeedColorizer.m in Sources */,
+				AA000D /* WindyForecastResolver.m in Sources */,
+				AA000F /* WindTileDiskCache.m in Sources */,
+				AA0011 /* WindRasterLayerRenderer.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		AA002B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+			};
+			name = Debug;
+		};
+		AA002C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		AA002D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = BB0003 /* Pods-WeatherTileDemo.debug.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = JD7DHXLK93;
+				INFOPLIST_FILE = WeatherTileDemo/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.gz.test;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		AA002E /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = BB0004 /* Pods-WeatherTileDemo.release.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = JD7DHXLK93;
+				INFOPLIST_FILE = WeatherTileDemo/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.gz.test;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AA0026 /* Build configuration list for PBXNativeTarget "WeatherTileDemo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA002D /* Debug */,
+				AA002E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA002A /* Build configuration list for PBXProject "WeatherTileDemo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA002B /* Debug */,
+				AA002C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = AA0029 /* Project object */;
+}

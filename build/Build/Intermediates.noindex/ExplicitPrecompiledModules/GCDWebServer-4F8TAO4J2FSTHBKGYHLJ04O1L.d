@@ -1,0 +1,20 @@
+moduledependenciestarget: \
+  /Users/admin/Desktop/AgentFile/WeatherTileDemo/build/Build/Products/Debug-iphonesimulator/GCDWebServer/GCDWebServer.framework/Modules/module.modulemap \
+  /Users/admin/Desktop/AgentFile/WeatherTileDemo/build/Build/Products/Debug-iphonesimulator/GCDWebServer/GCDWebServer.framework/Headers/GCDWebServer-umbrella.h \
+  /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.2.sdk/System/Library/Frameworks/UIKit.framework/Modules/module.modulemap \
+  /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.2.sdk/System/Library/Frameworks/Foundation.framework/Modules/module.modulemap \
+  /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.2.sdk/usr/include/DarwinFoundation1.modulemap \
+  /Users/admin/Desktop/AgentFile/WeatherTileDemo/build/Build/Products/Debug-iphonesimulator/GCDWebServer/GCDWebServer.framework/Headers/GCDWebServer.h \
+  /Users/admin/Desktop/AgentFile/WeatherTileDemo/build/Build/Products/Debug-iphonesimulator/GCDWebServer/GCDWebServer.framework/Headers/GCDWebServerRequest.h \
+  /Users/admin/Desktop/AgentFile/WeatherTileDemo/build/Build/Products/Debug-iphonesimulator/GCDWebServer/GCDWebServer.framework/Headers/GCDWebServerResponse.h \
+  /Users/admin/Desktop/AgentFile/WeatherTileDemo/build/Build/Products/Debug-iphonesimulator/GCDWebServer/GCDWebServer.framework/Headers/GCDWebServerConnection.h \
+  /Users/admin/Desktop/AgentFile/WeatherTileDemo/build/Build/Products/Debug-iphonesimulator/GCDWebServer/GCDWebServer.framework/Headers/GCDWebServerFunctions.h \
+  /Users/admin/Desktop/AgentFile/WeatherTileDemo/build/Build/Products/Debug-iphonesimulator/GCDWebServer/GCDWebServer.framework/Headers/GCDWebServerHTTPStatusCodes.h \
+  /Users/admin/Desktop/AgentFile/WeatherTileDemo/build/Build/Products/Debug-iphonesimulator/GCDWebServer/GCDWebServer.framework/Headers/GCDWebServerDataRequest.h \
+  /Users/admin/Desktop/AgentFile/WeatherTileDemo/build/Build/Products/Debug-iphonesimulator/GCDWebServer/GCDWebServer.framework/Headers/GCDWebServerFileRequest.h \
+  /Users/admin/Desktop/AgentFile/WeatherTileDemo/build/Build/Products/Debug-iphonesimulator/GCDWebServer/GCDWebServer.framework/Headers/GCDWebServerMultiPartFormRequest.h \
+  /Users/admin/Desktop/AgentFile/WeatherTileDemo/build/Build/Products/Debug-iphonesimulator/GCDWebServer/GCDWebServer.framework/Headers/GCDWebServerURLEncodedFormRequest.h \
+  /Users/admin/Desktop/AgentFile/WeatherTileDemo/build/Build/Products/Debug-iphonesimulator/GCDWebServer/GCDWebServer.framework/Headers/GCDWebServerDataResponse.h \
+  /Users/admin/Desktop/AgentFile/WeatherTileDemo/build/Build/Products/Debug-iphonesimulator/GCDWebServer/GCDWebServer.framework/Headers/GCDWebServerErrorResponse.h \
+  /Users/admin/Desktop/AgentFile/WeatherTileDemo/build/Build/Products/Debug-iphonesimulator/GCDWebServer/GCDWebServer.framework/Headers/GCDWebServerFileResponse.h \
+  /Users/admin/Desktop/AgentFile/WeatherTileDemo/build/Build/Products/Debug-iphonesimulator/GCDWebServer/GCDWebServer.framework/Headers/GCDWebServerStreamedResponse.h
