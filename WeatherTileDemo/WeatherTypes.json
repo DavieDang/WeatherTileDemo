@@ -45,21 +45,26 @@
       "enhanceContrast": false,
       "legend": {
         "title": "海平面气压 · ECMWF HRES（hPa）",
-        "colors": ["#781496", "#2D82D7", "#5AC382", "#DCB937", "#EB822D", "#E44628"],
-        "labels": ["≤940", "1000", "≥1050"]
+        "colors": ["#081030", "#002060", "#003492", "#005A94", "#007592", "#1A8C93", "#67A29B", "#9BB7AC", "#B6B6B6", "#B0AE98", "#A7936B", "#A37443", "#9F512C", "#8E2F39", "#6F1840", "#300818"],
+        "labels": ["≤900", "1013", "≥1080"]
       },
       "colorStops": [
-        {"value": 940, "color": "#781496"},
-        {"value": 955, "color": "#4628B4"},
-        {"value": 970, "color": "#2850CD"},
-        {"value": 985, "color": "#2D82D7"},
-        {"value": 995, "color": "#3CAABE"},
-        {"value": 1000, "color": "#5AC382"},
-        {"value": 1010, "color": "#9BCD4B"},
-        {"value": 1020, "color": "#DCB937"},
-        {"value": 1030, "color": "#EB822D"},
-        {"value": 1040, "color": "#E44628"},
-        {"value": 1050, "color": "#AF1E32"}
+        {"value": 900, "color": "#081030"},
+        {"value": 950, "color": "#002060"},
+        {"value": 976, "color": "#003492"},
+        {"value": 986, "color": "#005A94"},
+        {"value": 995, "color": "#007592"},
+        {"value": 1002, "color": "#1A8C93"},
+        {"value": 1007, "color": "#67A29B"},
+        {"value": 1011.25, "color": "#9BB7AC"},
+        {"value": 1013.25, "color": "#B6B6B6"},
+        {"value": 1015.25, "color": "#B0AE98"},
+        {"value": 1019, "color": "#A7936B"},
+        {"value": 1024, "color": "#A37443"},
+        {"value": 1030, "color": "#9F512C"},
+        {"value": 1038, "color": "#8E2F39"},
+        {"value": 1046, "color": "#6F1840"},
+        {"value": 1080, "color": "#300818"}
       ]
     }
   ]
