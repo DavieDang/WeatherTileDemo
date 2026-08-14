@@ -262,6 +262,18 @@ static const NSInteger kMemoryCacheLimit = 64;
     CGImageRelease(croppedImage);
     
     // ⭐ 第四步：解码风场（裁剪后的像素，从 row 0 开始，无需跳行）
+#if DEBUG
+    // 诊断：打印裁剪后数据区的原始像素
+    NSLog(@"[DEBUG] 📍 dataPixels 前5个像素值:");
+    for (int i = 0; i < 5; i++) {
+        NSLog(@"  [%d] = 0x%08X", i, dataPixels[i]);
+    }
+    // 打印数据区第 50 行的几个像素
+    NSLog(@"[DEBUG] 📍 dataPixels row50 col0-4:");
+    for (int i = 0; i < 5; i++) {
+        NSLog(@"  [50,%d] = 0x%08X", i, dataPixels[50 * fullWidth + i]);
+    }
+#endif
     WindField *field = [WindyWindTileDecoder decodeDataPixels:dataPixels
                                                         width:fullWidth
                                                        height:dataHeight
@@ -269,11 +281,39 @@ static const NSInteger kMemoryCacheLimit = 64;
     free(dataPixels);
     NSLog(@"[DEBUG] 风场解码完成");
     
+#if DEBUG
+    // 诊断：打印解码后的 u/v 和风速
+    NSLog(@"[DEBUG] 📍 解码后前5个点 u/v/speed:");
+    for (int i = 0; i < 5; i++) {
+        float u = field->u[i];
+        float v = field->v[i];
+        if (!isnan(u) && !isnan(v)) {
+            NSLog(@"  [%d] u=%.2f v=%.2f speed=%.2f", i, u, v, sqrtf(u*u+v*v));
+        } else {
+            NSLog(@"  [%d] 缺测 NaN", i);
+        }
+    }
+#endif
+    
     // ⭐ 第五步：Windy 色阶着色
     uint32_t *coloredPixels = [WindSpeedColorizer colorizeField:field];
     free(field->u);
     free(field->v);
     free(field);
+    
+#if DEBUG
+    // 诊断：打印着色后的像素值
+    NSLog(@"[DEBUG] 📍 着色后前5个像素:");
+    for (int i = 0; i < 5; i++) {
+        uint32_t p = coloredPixels[i];
+        NSLog(@"  [%d] = 0x%08X (A=%d R=%d G=%d B=%d)",
+              i, p,
+              (p >> 24) & 0xFF,
+              (p >> 16) & 0xFF,
+              (p >> 8) & 0xFF,
+              p & 0xFF);
+    }
+#endif
     
     // ⭐ 第六步：输出 256x256 PNG
     // 注意：输出时需要垂直翻转，恢复与原始图片一致的方向。
