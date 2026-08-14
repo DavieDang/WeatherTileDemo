@@ -56,18 +56,20 @@ typedef struct {
                          header:(WindFieldHeader)header;
 
 /**
- * 从已裁剪的数据区像素（257x257）解码气压标量场（256x256）
- * 气压值由 R 通道编码（hPa），范围由 header 的 rMin/rMax 给出
+ * 从已裁剪的数据区像素（257x257）解码标量场（256x256）
+ * 数值由 R 通道编码，范围由 header 的 rMin/rMax 给出，可附加归一化系数
  * @param pixels 数据区 ARGB 像素数组（row 0 为原始 JPEG row 8）
  * @param width 数据区宽度（应为 257）
  * @param height 数据区高度（应为 257）
  * @param header 头部通道范围参数
- * @return 气压数组（256x256 个 float，缺测为 NAN），调用者负责 free
+ * @param scale 归一化系数（如气压头部 hPa×100 时传 0.01；无缩放传 1.0）
+ * @return 标量数组（256x256 个 float，缺测为 NAN），调用者负责 free
  */
-+ (float *)decodePressureDataPixels:(uint32_t *)pixels
-                              width:(NSInteger)width
-                             height:(NSInteger)height
-                             header:(WindFieldHeader)header;
++ (float *)decodeScalarDataPixels:(uint32_t *)pixels
+                            width:(NSInteger)width
+                           height:(NSInteger)height
+                           header:(WindFieldHeader)header
+                            scale:(float)scale;
 
 @end
 

@@ -8,6 +8,7 @@
 #import "ViewController.h"
 #import "WindTileServer.h"
 #import "WindRasterLayerRenderer.h"
+#import "WeatherLayerConfig.h"
 @import MapLibre;
 
 @interface ViewController ()<MLNMapViewDelegate>
@@ -76,7 +77,15 @@
 }
 
 - (void)addTypeControl {
-    UISegmentedControl *control = [[UISegmentedControl alloc] initWithItems:@[@"风速", @"气压"]];
+    NSArray<WeatherLayerConfig *> *types = [[WeatherLayerConfigManager shared] allTypes];
+    if (types.count == 0) {
+        return;
+    }
+    NSMutableArray *items = [NSMutableArray array];
+    for (WeatherLayerConfig *config in types) {
+        [items addObject:config.displayName];
+    }
+    UISegmentedControl *control = [[UISegmentedControl alloc] initWithItems:items];
     control.selectedSegmentIndex = 0;
     control.translatesAutoresizingMaskIntoConstraints = NO;
     control.backgroundColor = [UIColor colorWithRed:11/255.0 green:16/255.0 blue:32/255.0 alpha:0.86];
@@ -98,10 +107,10 @@
 }
 
 - (void)typeControlChanged:(UISegmentedControl *)sender {
-    WeatherLayerType type = (sender.selectedSegmentIndex == 1)
-        ? WeatherLayerTypePressure
-        : WeatherLayerTypeWind;
-    [self switchToType:type];
+    NSArray<WeatherLayerConfig *> *types = [[WeatherLayerConfigManager shared] allTypes];
+    if (sender.selectedSegmentIndex >= 0 && sender.selectedSegmentIndex < types.count) {
+        [self switchToType:types[sender.selectedSegmentIndex].typeId];
+    }
 }
 
 - (void)switchToType:(WeatherLayerType)type {
@@ -134,6 +143,11 @@
     UIView *oldLegend = [self.view viewWithTag:20002];
     [oldLegend removeFromSuperview];
     
+    WeatherLayerConfig *config = [[WeatherLayerConfigManager shared] configForType:type];
+    if (!config || !config.legend) {
+        return;
+    }
+    
     UIView *container = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 220, 80)];
     container.tag = 20002;
     container.backgroundColor = [UIColor colorWithRed:11/255.0 green:16/255.0 blue:32/255.0 alpha:0.86];
@@ -141,6 +155,7 @@
     
     // 标题
     UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(12, 9, 200, 20)];
+    title.text = config.legend.title;
     title.textColor = [UIColor whiteColor];
     title.font = [UIFont systemFontOfSize:12];
     [container addSubview:title];
@@ -152,42 +167,20 @@
     gradientLayer.startPoint = CGPointMake(0, 0.5);
     gradientLayer.endPoint = CGPointMake(1, 0.5);
     
-    NSArray *colors = nil;
-    NSArray *labels = nil;
-    
-    if ([type isEqualToString:WeatherLayerTypePressure]) {
-        title.text = @"海平面气压 · ECMWF HRES（hPa）";
-        colors = @[
-            (id)[UIColor colorWithRed:120/255.0 green:20/255.0 blue:150/255.0 alpha:1].CGColor,
-            (id)[UIColor colorWithRed:45/255.0 green:130/255.0 blue:215/255.0 alpha:1].CGColor,
-            (id)[UIColor colorWithRed:90/255.0 green:195/255.0 blue:130/255.0 alpha:1].CGColor,
-            (id)[UIColor colorWithRed:220/255.0 green:185/255.0 blue:55/255.0 alpha:1].CGColor,
-            (id)[UIColor colorWithRed:235/255.0 green:130/255.0 blue:45/255.0 alpha:1].CGColor,
-            (id)[UIColor colorWithRed:228/255.0 green:70/255.0 blue:40/255.0 alpha:1].CGColor,
-        ];
-        labels = @[@"≤940", @"1000", @"≥1050"];
-    } else {
-        title.text = @"风速 · ECMWF HRES（m/s）";
-        colors = @[
-            (id)[UIColor colorWithRed:98/255.0 green:113/255.0 blue:183/255.0 alpha:1].CGColor,
-            (id)[UIColor colorWithRed:74/255.0 green:148/255.0 blue:169/255.0 alpha:1].CGColor,
-            (id)[UIColor colorWithRed:83/255.0 green:165/255.0 blue:83/255.0 alpha:1].CGColor,
-            (id)[UIColor colorWithRed:167/255.0 green:157/255.0 blue:81/255.0 alpha:1].CGColor,
-            (id)[UIColor colorWithRed:161/255.0 green:108/255.0 blue:92/255.0 alpha:1].CGColor,
-            (id)[UIColor colorWithRed:175/255.0 green:80/255.0 blue:136/255.0 alpha:1].CGColor,
-            (id)[UIColor colorWithRed:117/255.0 green:74/255.0 blue:147/255.0 alpha:1].CGColor,
-            (id)[UIColor colorWithRed:231/255.0 green:215/255.0 blue:215/255.0 alpha:1].CGColor,
-        ];
-        labels = @[@"0", @"大风 17", @"≥46"];
+    NSMutableArray *cgColors = [NSMutableArray array];
+    for (UIColor *color in config.legend.colors) {
+        [cgColors addObject:(id)color.CGColor];
     }
-    gradientLayer.colors = colors;
+    gradientLayer.colors = cgColors;
     gradientLayer.cornerRadius = 3;
     [gradient.layer addSublayer:gradientLayer];
     [container addSubview:gradient];
     
     // 标签
+    NSArray *labels = config.legend.labels;
     NSArray *aligns = @[@(NSTextAlignmentLeft), @(NSTextAlignmentCenter), @(NSTextAlignmentRight)];
-    for (int i = 0; i < 3; i++) {
+    NSInteger labelCount = MIN(labels.count, 3);
+    for (NSInteger i = 0; i < labelCount; i++) {
         UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(12 + i * 65, 53, 65, 18)];
         label.text = labels[i];
         label.textColor = [UIColor colorWithRed:210/255.0 green:218/255.0 blue:232/255.0 alpha:1];

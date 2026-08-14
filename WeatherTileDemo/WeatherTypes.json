@@ -1,0 +1,66 @@
+{
+  "types": [
+    {
+      "id": "wind",
+      "displayName": "风速",
+      "pathPrefix": "wind",
+      "remoteSuffix": "wind-surface.jpg",
+      "dataType": "vector",
+      "enhanceContrast": true,
+      "legend": {
+        "title": "风速 · ECMWF HRES（m/s）",
+        "colors": ["#6271B7", "#4A94A9", "#53A553", "#A79D51", "#A16C5C", "#AF5088", "#754A93", "#E7D7D7"],
+        "labels": ["0", "大风 17", "≥46"]
+      },
+      "colorStops": [
+        {"value": 0, "color": "#6271B7"},
+        {"value": 1, "color": "#39619F"},
+        {"value": 3, "color": "#4A94A9"},
+        {"value": 5, "color": "#4D8D7B"},
+        {"value": 7, "color": "#53A553"},
+        {"value": 9, "color": "#359F35"},
+        {"value": 11, "color": "#A79D51"},
+        {"value": 13, "color": "#9F7F3A"},
+        {"value": 15, "color": "#A16C5C"},
+        {"value": 17, "color": "#813A4E"},
+        {"value": 19, "color": "#AF5088"},
+        {"value": 21, "color": "#754A93"},
+        {"value": 24, "color": "#6D61A3"},
+        {"value": 27, "color": "#44698D"},
+        {"value": 29, "color": "#5C9098"},
+        {"value": 36, "color": "#7D44A5"},
+        {"value": 46, "color": "#E7D7D7"},
+        {"value": 51, "color": "#DBD487"},
+        {"value": 77, "color": "#CDCA70"},
+        {"value": 104, "color": "#808080"}
+      ]
+    },
+    {
+      "id": "pressure",
+      "displayName": "气压",
+      "pathPrefix": "pressure",
+      "remoteSuffix": "pressure-surface.jpg",
+      "dataType": "scalar",
+      "scalarScale": 0.01,
+      "enhanceContrast": false,
+      "legend": {
+        "title": "海平面气压 · ECMWF HRES（hPa）",
+        "colors": ["#781496", "#2D82D7", "#5AC382", "#DCB937", "#EB822D", "#E44628"],
+        "labels": ["≤940", "1000", "≥1050"]
+      },
+      "colorStops": [
+        {"value": 940, "color": "#781496"},
+        {"value": 955, "color": "#4628B4"},
+        {"value": 970, "color": "#2850CD"},
+        {"value": 985, "color": "#2D82D7"},
+        {"value": 995, "color": "#3CAABE"},
+        {"value": 1000, "color": "#5AC382"},
+        {"value": 1010, "color": "#9BCD4B"},
+        {"value": 1020, "color": "#DCB937"},
+        {"value": 1030, "color": "#EB822D"},
+        {"value": 1040, "color": "#E44628"},
+        {"value": 1050, "color": "#AF1E32"}
+      ]
+    }
+  ]
+}

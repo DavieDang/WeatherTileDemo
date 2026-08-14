@@ -12,12 +12,13 @@
 		AA0005 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = AA0006 /* main.m */; };
 		AA0007 /* WindTileServer.m in Sources */ = {isa = PBXBuildFile; fileRef = AA0008 /* WindTileServer.m */; };
 		AA0009 /* WindyWindTileDecoder.m in Sources */ = {isa = PBXBuildFile; fileRef = AA000A /* WindyWindTileDecoder.m */; };
-		AA000B /* WindSpeedColorizer.m in Sources */ = {isa = PBXBuildFile; fileRef = AA000C /* WindSpeedColorizer.m */; };
 		AA000D /* WindyForecastResolver.m in Sources */ = {isa = PBXBuildFile; fileRef = AA000E /* WindyForecastResolver.m */; };
 		AA000F /* WindTileDiskCache.m in Sources */ = {isa = PBXBuildFile; fileRef = AA0010 /* WindTileDiskCache.m */; };
 		AA0011 /* WindRasterLayerRenderer.m in Sources */ = {isa = PBXBuildFile; fileRef = AA0012 /* WindRasterLayerRenderer.m */; };
 		AA0013 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA0014 /* LaunchScreen.storyboard */; };
-		DD0001 /* PressureColorizer.m in Sources */ = {isa = PBXBuildFile; fileRef = DD0002 /* PressureColorizer.m */; };
+		DD0001 /* WeatherLayerConfig.m in Sources */ = {isa = PBXBuildFile; fileRef = DD0002 /* WeatherLayerConfig.m */; };
+		DD0007 /* WeatherColorizer.m in Sources */ = {isa = PBXBuildFile; fileRef = DD0004 /* WeatherColorizer.m */; };
+		DD0008 /* WeatherTypes.json in Resources */ = {isa = PBXBuildFile; fileRef = DD0006 /* WeatherTypes.json */; };
 		BB0001 /* Pods_WeatherTileDemo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BB0002 /* Pods_WeatherTileDemo.framework */; };
 /* End PBXBuildFile section */
 
@@ -27,7 +28,6 @@
 		AA0006 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		AA0008 /* WindTileServer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WindTileServer.m; sourceTree = "<group>"; };
 		AA000A /* WindyWindTileDecoder.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WindyWindTileDecoder.m; sourceTree = "<group>"; };
-		AA000C /* WindSpeedColorizer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WindSpeedColorizer.m; sourceTree = "<group>"; };
 		AA000E /* WindyForecastResolver.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WindyForecastResolver.m; sourceTree = "<group>"; };
 		AA0010 /* WindTileDiskCache.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WindTileDiskCache.m; sourceTree = "<group>"; };
 		AA0012 /* WindRasterLayerRenderer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WindRasterLayerRenderer.m; sourceTree = "<group>"; };
@@ -39,8 +39,11 @@
 		AA0019 /* WindSpeedColorizer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WindSpeedColorizer.h; sourceTree = "<group>"; };
 		AA001A /* WindyForecastResolver.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WindyForecastResolver.h; sourceTree = "<group>"; };
 		AA001B /* WindTileDiskCache.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WindTileDiskCache.h; sourceTree = "<group>"; };
-		DD0002 /* PressureColorizer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PressureColorizer.m; sourceTree = "<group>"; };
-		DD0003 /* PressureColorizer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PressureColorizer.h; sourceTree = "<group>"; };
+		DD0002 /* WeatherLayerConfig.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WeatherLayerConfig.m; sourceTree = "<group>"; };
+		DD0003 /* WeatherLayerConfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WeatherLayerConfig.h; sourceTree = "<group>"; };
+		DD0004 /* WeatherColorizer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WeatherColorizer.m; sourceTree = "<group>"; };
+		DD0005 /* WeatherColorizer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WeatherColorizer.h; sourceTree = "<group>"; };
+		DD0006 /* WeatherTypes.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = WeatherTypes.json; sourceTree = "<group>"; };
 		AA001C /* WindRasterLayerRenderer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WindRasterLayerRenderer.h; sourceTree = "<group>"; };
 		AA001D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AA001E /* WeatherTileDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WeatherTileDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -82,16 +85,17 @@
 				AA0008 /* WindTileServer.m */,
 				AA0018 /* WindyWindTileDecoder.h */,
 				AA000A /* WindyWindTileDecoder.m */,
-				AA0019 /* WindSpeedColorizer.h */,
-				AA000C /* WindSpeedColorizer.m */,
 				AA001A /* WindyForecastResolver.h */,
 				AA000E /* WindyForecastResolver.m */,
 				AA001B /* WindTileDiskCache.h */,
 				AA0010 /* WindTileDiskCache.m */,
 				AA001C /* WindRasterLayerRenderer.h */,
 				AA0012 /* WindRasterLayerRenderer.m */,
-				DD0003 /* PressureColorizer.h */,
-				DD0002 /* PressureColorizer.m */,
+				DD0003 /* WeatherLayerConfig.h */,
+				DD0002 /* WeatherLayerConfig.m */,
+				DD0005 /* WeatherColorizer.h */,
+				DD0004 /* WeatherColorizer.m */,
+				DD0006 /* WeatherTypes.json */,
 				AA0014 /* LaunchScreen.storyboard */,
 				AA001D /* Info.plist */,
 				AA0006 /* main.m */,
@@ -184,6 +188,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA0013 /* LaunchScreen.storyboard in Resources */,
+				DD0008 /* WeatherTypes.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -245,11 +250,11 @@
 				AA0005 /* main.m in Sources */,
 				AA0007 /* WindTileServer.m in Sources */,
 				AA0009 /* WindyWindTileDecoder.m in Sources */,
-				AA000B /* WindSpeedColorizer.m in Sources */,
 				AA000D /* WindyForecastResolver.m in Sources */,
 				AA000F /* WindTileDiskCache.m in Sources */,
 				AA0011 /* WindRasterLayerRenderer.m in Sources */,
-				DD0001 /* PressureColorizer.m in Sources */,
+				DD0001 /* WeatherLayerConfig.m in Sources */,
+				DD0007 /* WeatherColorizer.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

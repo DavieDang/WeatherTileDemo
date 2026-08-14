@@ -231,27 +231,22 @@ typedef struct {
     return field;
 }
 
-+ (float *)decodePressureDataPixels:(uint32_t *)pixels
-                              width:(NSInteger)width
-                             height:(NSInteger)height
-                             header:(WindFieldHeader)header {
-    // 气压由 R 通道编码（hPa），从裁剪后的数据区读取 256×256
++ (float *)decodeScalarDataPixels:(uint32_t *)pixels
+                            width:(NSInteger)width
+                           height:(NSInteger)height
+                           header:(WindFieldHeader)header
+                            scale:(float)scale {
+    // 标量由 R 通道编码，从裁剪后的数据区读取 256×256
     NSInteger outSize = kTileSize * kTileSize;
-    float *pressures = (float *)malloc(outSize * sizeof(float));
+    float *values = (float *)malloc(outSize * sizeof(float));
     
-    // Windy 气压瓦片的头部范围编码为 hPa × 100（如 99384.4 = 993.844 hPa）
-    // 若范围明显超过 hPa 物理值（> 10000），则除以 100 归一化
-    float rMinHpa = header.rMin;
-    float rMaxHpa = header.rMax;
-    if (fabsf(rMinHpa) > 10000.0f || fabsf(rMaxHpa) > 10000.0f) {
-        rMinHpa /= 100.0f;
-        rMaxHpa /= 100.0f;
-    }
-    float rStep = (rMaxHpa - rMinHpa) / 255.0f;
+    float rMinScaled = header.rMin * scale;
+    float rMaxScaled = header.rMax * scale;
+    float rStep = (rMaxScaled - rMinScaled) / 255.0f;
     
     NSInteger validCount = 0;
-    float minPressure = INFINITY;
-    float maxPressure = -INFINITY;
+    float minValue = INFINITY;
+    float maxValue = -INFINITY;
     
     for (NSInteger y = 0; y < kTileSize; y++) {
         NSInteger sourceOffset = y * width;
@@ -262,20 +257,20 @@ typedef struct {
             uint8_t blue = pixel & 0xFF;
             NSInteger index = targetOffset + x;
             if (blue >= kMissingBlueThreshold) {
-                pressures[index] = NAN;
+                values[index] = NAN;
             } else {
-                pressures[index] = red * rStep + rMinHpa;
-                if (pressures[index] < minPressure) minPressure = pressures[index];
-                if (pressures[index] > maxPressure) maxPressure = pressures[index];
+                values[index] = red * rStep + rMinScaled;
+                if (values[index] < minValue) minValue = values[index];
+                if (values[index] > maxValue) maxValue = values[index];
                 validCount++;
             }
         }
     }
     
-    NSLog(@"[DECODER] 📊 气压解码完成: 有效=%ld 范围=%.1f~%.1f hPa",
-          (long)validCount, minPressure, maxPressure);
+    NSLog(@"[DECODER] 📊 标量解码完成: 有效=%ld 范围=%.2f~%.2f",
+          (long)validCount, minValue, maxValue);
     
-    return pressures;
+    return values;
 }
 
 @end

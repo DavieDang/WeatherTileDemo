@@ -5,8 +5,8 @@
 
 #import "WindTileServer.h"
 #import "WindyWindTileDecoder.h"
-#import "WindSpeedColorizer.h"
-#import "PressureColorizer.h"
+#import "WeatherLayerConfig.h"
+#import "WeatherColorizer.h"
 #import "WindyForecastResolver.h"
 #import "WindTileDiskCache.h"
 #import <GCDWebServer/GCDWebServer.h>
@@ -97,7 +97,7 @@ static const NSInteger kMemoryCacheLimit = 64;
 
 - (GCDWebServerDataResponse *)handleRequest:(GCDWebServerRequest *)request {
     NSString *path = request.path;
-    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"/(wind|pressure)/(\\d+)/(-?\\d+)/(\\d+)\\.png"
+    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"/([a-zA-Z]+)/(\\d+)/(-?\\d+)/(\\d+)\\.png"
                                                                             options:0
                                                                               error:nil];
     NSTextCheckingResult *match = [regex firstMatchInString:path options:0 range:NSMakeRange(0, path.length)];
@@ -110,6 +110,12 @@ static const NSInteger kMemoryCacheLimit = 64;
     NSInteger z = [[path substringWithRange:[match rangeAtIndex:2]] integerValue];
     NSInteger x = [[path substringWithRange:[match rangeAtIndex:3]] integerValue];
     NSInteger y = [[path substringWithRange:[match rangeAtIndex:4]] integerValue];
+    
+    // 校验类型配置存在
+    if (![[WeatherLayerConfigManager shared] configForType:type]) {
+        NSLog(@"[WindTileServer] ❌ 未知气象类型: %@", type);
+        return [GCDWebServerDataResponse responseWithData:self.transparentTile contentType:@"image/png"];
+    }
     
     NSData *tileData = [self tileForType:type z:z x:x y:y];
     return [GCDWebServerDataResponse responseWithData:tileData contentType:@"image/png"];
@@ -170,13 +176,6 @@ static const NSInteger kMemoryCacheLimit = 64;
     return [NSString stringWithFormat:@"%@_%@", type, self.currentForecastKey];
 }
 
-- (NSString *)remoteSuffixForType:(WeatherLayerType)type {
-    if ([type isEqualToString:WeatherLayerTypePressure]) {
-        return @"pressure-surface.jpg";
-    }
-    return @"wind-surface.jpg";
-}
-
 - (NSData *)tileForForecastType:(WeatherLayerType)type z:(NSInteger)z x:(NSInteger)x y:(NSInteger)y {
     NSString *diskKey = [self diskForecastKeyForType:type];
     [self.diskCache activateForecast:diskKey];
@@ -199,7 +198,9 @@ static const NSInteger kMemoryCacheLimit = 64;
     }
     
     // 3. 远程下载 + 渲染
-    NSString *remoteUrl = [NSString stringWithFormat:@"%@/%@/%@", self.currentBaseUrl, coordinateKey, [self remoteSuffixForType:type]];
+    WeatherLayerConfig *config = [[WeatherLayerConfigManager shared] configForType:type];
+    NSString *remoteUrl = [NSString stringWithFormat:@"%@/%@/%@",
+                           self.currentBaseUrl, coordinateKey, config.remoteSuffix];
     NSData *pngData = [self fetchAndRender:remoteUrl type:type];
     
     [self.diskCache writeTile:pngData forForecast:diskKey z:z x:x y:y];
@@ -302,42 +303,46 @@ static const NSInteger kMemoryCacheLimit = 64;
     }
 #endif
     uint32_t *coloredPixels = NULL;
+    WeatherLayerConfig *config = [[WeatherLayerConfigManager shared] configForType:type];
+    static const uint8_t kOverlayAlpha = 217;
     
-    if ([type isEqualToString:WeatherLayerTypePressure]) {
-        // 气压：R 通道编码 hPa
-        float *pressures = [WindyWindTileDecoder decodePressureDataPixels:dataPixels
-                                                                    width:fullWidth
-                                                                   height:dataHeight
-                                                                   header:header];
-        coloredPixels = [PressureColorizer colorizePressure:pressures size:256 * 256];
-        free(pressures);
-        NSLog(@"[DEBUG] 气压着色完成");
+    if ([config.dataType isEqualToString:@"scalar"]) {
+        // 标量场（如气压）：R 通道编码，scale 归一化
+        float *values = [WindyWindTileDecoder decodeScalarDataPixels:dataPixels
+                                                               width:fullWidth
+                                                              height:dataHeight
+                                                              header:header
+                                                               scale:config.scalarScale];
+        coloredPixels = [WeatherColorizer colorizeValues:values
+                                                    size:256 * 256
+                                                   stops:config.colorStops
+                                                  enhance:config.enhanceContrast
+                                                    alpha:kOverlayAlpha];
+        free(values);
+        NSLog(@"[DEBUG] %@ 标量着色完成", type);
     } else {
-        // 风场：R/G 通道编码 u/v
+        // 矢量场（如风场）：R/G 通道编码 u/v，计算风速
         WindField *field = [WindyWindTileDecoder decodeDataPixels:dataPixels
                                                             width:fullWidth
                                                            height:dataHeight
                                                            header:header];
-        
-#if DEBUG
-        // 诊断：打印解码后的 u/v 和风速
-        NSLog(@"[DEBUG] 📍 解码后前5个点 u/v/speed:");
-        for (int i = 0; i < 5; i++) {
+        NSInteger total = field->width * field->height;
+        float *speeds = (float *)malloc(total * sizeof(float));
+        for (NSInteger i = 0; i < total; i++) {
             float u = field->u[i];
             float v = field->v[i];
-            if (!isnan(u) && !isnan(v)) {
-                NSLog(@"  [%d] u=%.2f v=%.2f speed=%.2f", i, u, v, sqrtf(u*u+v*v));
-            } else {
-                NSLog(@"  [%d] 缺测 NaN", i);
-            }
+            speeds[i] = (isnan(u) || isnan(v)) ? NAN : sqrtf(u * u + v * v);
         }
-#endif
-        
-        coloredPixels = [WindSpeedColorizer colorizeField:field];
+        coloredPixels = [WeatherColorizer colorizeValues:speeds
+                                                    size:total
+                                                   stops:config.colorStops
+                                                  enhance:config.enhanceContrast
+                                                    alpha:kOverlayAlpha];
+        free(speeds);
         free(field->u);
         free(field->v);
         free(field);
-        NSLog(@"[DEBUG] 风场着色完成");
+        NSLog(@"[DEBUG] %@ 矢量着色完成", type);
     }
     free(dataPixels);
     NSLog(@"[DEBUG] 气象数据解码完成");
