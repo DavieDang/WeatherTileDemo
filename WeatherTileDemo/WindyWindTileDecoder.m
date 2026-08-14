@@ -239,7 +239,15 @@ typedef struct {
     NSInteger outSize = kTileSize * kTileSize;
     float *pressures = (float *)malloc(outSize * sizeof(float));
     
-    float rStep = (header.rMax - header.rMin) / 255.0f;
+    // Windy 气压瓦片的头部范围编码为 hPa × 100（如 99384.4 = 993.844 hPa）
+    // 若范围明显超过 hPa 物理值（> 10000），则除以 100 归一化
+    float rMinHpa = header.rMin;
+    float rMaxHpa = header.rMax;
+    if (fabsf(rMinHpa) > 10000.0f || fabsf(rMaxHpa) > 10000.0f) {
+        rMinHpa /= 100.0f;
+        rMaxHpa /= 100.0f;
+    }
+    float rStep = (rMaxHpa - rMinHpa) / 255.0f;
     
     NSInteger validCount = 0;
     float minPressure = INFINITY;
@@ -256,7 +264,7 @@ typedef struct {
             if (blue >= kMissingBlueThreshold) {
                 pressures[index] = NAN;
             } else {
-                pressures[index] = red * rStep + header.rMin;
+                pressures[index] = red * rStep + rMinHpa;
                 if (pressures[index] < minPressure) minPressure = pressures[index];
                 if (pressures[index] > maxPressure) maxPressure = pressures[index];
                 validCount++;
