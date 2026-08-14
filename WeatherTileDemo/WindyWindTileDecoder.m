@@ -231,4 +231,43 @@ typedef struct {
     return field;
 }
 
++ (float *)decodePressureDataPixels:(uint32_t *)pixels
+                              width:(NSInteger)width
+                             height:(NSInteger)height
+                             header:(WindFieldHeader)header {
+    // 气压由 R 通道编码（hPa），从裁剪后的数据区读取 256×256
+    NSInteger outSize = kTileSize * kTileSize;
+    float *pressures = (float *)malloc(outSize * sizeof(float));
+    
+    float rStep = (header.rMax - header.rMin) / 255.0f;
+    
+    NSInteger validCount = 0;
+    float minPressure = INFINITY;
+    float maxPressure = -INFINITY;
+    
+    for (NSInteger y = 0; y < kTileSize; y++) {
+        NSInteger sourceOffset = y * width;
+        NSInteger targetOffset = y * kTileSize;
+        for (NSInteger x = 0; x < kTileSize; x++) {
+            uint32_t pixel = pixels[sourceOffset + x];
+            uint8_t red = (pixel >> 16) & 0xFF;
+            uint8_t blue = pixel & 0xFF;
+            NSInteger index = targetOffset + x;
+            if (blue >= kMissingBlueThreshold) {
+                pressures[index] = NAN;
+            } else {
+                pressures[index] = red * rStep + header.rMin;
+                if (pressures[index] < minPressure) minPressure = pressures[index];
+                if (pressures[index] > maxPressure) maxPressure = pressures[index];
+                validCount++;
+            }
+        }
+    }
+    
+    NSLog(@"[DECODER] 📊 气压解码完成: 有效=%ld 范围=%.1f~%.1f hPa",
+          (long)validCount, minPressure, maxPressure);
+    
+    return pressures;
+}
+
 @end

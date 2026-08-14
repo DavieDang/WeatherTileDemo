@@ -6,11 +6,15 @@
 #import "WindTileServer.h"
 #import "WindyWindTileDecoder.h"
 #import "WindSpeedColorizer.h"
+#import "PressureColorizer.h"
 #import "WindyForecastResolver.h"
 #import "WindTileDiskCache.h"
 #import <GCDWebServer/GCDWebServer.h>
 #import <GCDWebServer/GCDWebServerDataResponse.h>
 #import <UIKit/UIKit.h>
+
+WeatherLayerType const WeatherLayerTypeWind = @"wind";
+WeatherLayerType const WeatherLayerTypePressure = @"pressure";
 
 @interface WindTileServer ()
 
@@ -67,6 +71,7 @@ static const NSInteger kMemoryCacheLimit = 64;
     
     NSUInteger port = self.server.port;
     _tileTemplate = [NSString stringWithFormat:@"http://127.0.0.1:%lu/wind/{z}/{x}/{y}.png", (unsigned long)port];
+    _pressureTileTemplate = [NSString stringWithFormat:@"http://127.0.0.1:%lu/pressure/{z}/{x}/{y}.png", (unsigned long)port];
     
     // 预热预报时次
     dispatch_async(self.workQueue, ^{
@@ -77,6 +82,13 @@ static const NSInteger kMemoryCacheLimit = 64;
     return _tileTemplate;
 }
 
+- (NSString *)tileTemplateForType:(WeatherLayerType)type {
+    if ([type isEqualToString:WeatherLayerTypePressure]) {
+        return self.pressureTileTemplate;
+    }
+    return self.tileTemplate;
+}
+
 - (void)stop {
     [self.server stop];
     [self.memoryCache removeAllObjects];
@@ -85,7 +97,7 @@ static const NSInteger kMemoryCacheLimit = 64;
 
 - (GCDWebServerDataResponse *)handleRequest:(GCDWebServerRequest *)request {
     NSString *path = request.path;
-    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"/wind/(\\d+)/(-?\\d+)/(\\d+)\\.png"
+    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"/(wind|pressure)/(\\d+)/(-?\\d+)/(\\d+)\\.png"
                                                                             options:0
                                                                               error:nil];
     NSTextCheckingResult *match = [regex firstMatchInString:path options:0 range:NSMakeRange(0, path.length)];
@@ -94,16 +106,17 @@ static const NSInteger kMemoryCacheLimit = 64;
         return [GCDWebServerDataResponse responseWithData:self.transparentTile contentType:@"image/png"];
     }
     
-    NSInteger z = [[path substringWithRange:[match rangeAtIndex:1]] integerValue];
-    NSInteger x = [[path substringWithRange:[match rangeAtIndex:2]] integerValue];
-    NSInteger y = [[path substringWithRange:[match rangeAtIndex:3]] integerValue];
+    NSString *type = [path substringWithRange:[match rangeAtIndex:1]];
+    NSInteger z = [[path substringWithRange:[match rangeAtIndex:2]] integerValue];
+    NSInteger x = [[path substringWithRange:[match rangeAtIndex:3]] integerValue];
+    NSInteger y = [[path substringWithRange:[match rangeAtIndex:4]] integerValue];
     
-    NSData *tileData = [self tileForZ:z x:x y:y];
+    NSData *tileData = [self tileForType:type z:z x:x y:y];
     return [GCDWebServerDataResponse responseWithData:tileData contentType:@"image/png"];
 }
 
-- (NSData *)tileForZ:(NSInteger)z x:(NSInteger)x y:(NSInteger)y {
-    NSLog(@"[DEBUG] ===== Tile request: z=%ld x=%ld y=%ld =====", (long)z, (long)x, (long)y);
+- (NSData *)tileForType:(WeatherLayerType)type z:(NSInteger)z x:(NSInteger)x y:(NSInteger)y {
+    NSLog(@"[DEBUG] ===== %@ Tile request: z=%ld x=%ld y=%ld =====", type, (long)z, (long)x, (long)y);
     
     if (z < 0 || z > kMaxDataZoom) {
         NSLog(@"[DEBUG] Zoom %ld out of range [0-%ld], returning transparent", (long)z, (long)kMaxDataZoom);
@@ -124,9 +137,9 @@ static const NSInteger kMemoryCacheLimit = 64;
     
     @try {
         [self prepareForecast];
-        return [self tileForForecastZ:z x:wrappedX y:y];
+        return [self tileForForecastType:type z:z x:wrappedX y:y];
     } @catch (NSException *exception) {
-        NSLog(@"[WindTileServer] 瓦片 %ld/%ld/%ld 失败: %@", (long)z, (long)wrappedX, (long)y, exception.reason);
+        NSLog(@"[WindTileServer] %@ 瓦片 %ld/%ld/%ld 失败: %@", type, (long)z, (long)wrappedX, (long)y, exception.reason);
         return self.transparentTile;
     }
 }
@@ -153,9 +166,23 @@ static const NSInteger kMemoryCacheLimit = 64;
     }
 }
 
-- (NSData *)tileForForecastZ:(NSInteger)z x:(NSInteger)x y:(NSInteger)y {
+- (NSString *)diskForecastKeyForType:(WeatherLayerType)type {
+    return [NSString stringWithFormat:@"%@_%@", type, self.currentForecastKey];
+}
+
+- (NSString *)remoteSuffixForType:(WeatherLayerType)type {
+    if ([type isEqualToString:WeatherLayerTypePressure]) {
+        return @"pressure-surface.jpg";
+    }
+    return @"wind-surface.jpg";
+}
+
+- (NSData *)tileForForecastType:(WeatherLayerType)type z:(NSInteger)z x:(NSInteger)x y:(NSInteger)y {
+    NSString *diskKey = [self diskForecastKeyForType:type];
+    [self.diskCache activateForecast:diskKey];
+    
     NSString *coordinateKey = [NSString stringWithFormat:@"%ld/%ld/%ld", (long)z, (long)x, (long)y];
-    NSString *memoryKey = [NSString stringWithFormat:@"%@/%@", self.currentForecastKey, coordinateKey];
+    NSString *memoryKey = [NSString stringWithFormat:@"%@/%@/%@", type, self.currentForecastKey, coordinateKey];
     
     // 1. 查内存缓存
     NSData *cached = [self.memoryCache objectForKey:memoryKey];
@@ -164,25 +191,25 @@ static const NSInteger kMemoryCacheLimit = 64;
     }
     
     // 2. 查磁盘缓存
-    NSData *diskData = [self.diskCache readTileForForecast:self.currentForecastKey z:z x:x y:y];
+    NSData *diskData = [self.diskCache readTileForForecast:diskKey z:z x:x y:y];
     if (diskData) {
         [self.memoryCache setObject:diskData forKey:memoryKey];
-        NSLog(@"[WindTileServer] 磁盘缓存命中 %@ (%lu bytes)", coordinateKey, (unsigned long)diskData.length);
+        NSLog(@"[WindTileServer] %@ 磁盘缓存命中 %@ (%lu bytes)", type, coordinateKey, (unsigned long)diskData.length);
         return diskData;
     }
     
     // 3. 远程下载 + 渲染
-    NSString *remoteUrl = [NSString stringWithFormat:@"%@/%@/wind-surface.jpg", self.currentBaseUrl, coordinateKey];
-    NSData *pngData = [self fetchAndRender:remoteUrl];
+    NSString *remoteUrl = [NSString stringWithFormat:@"%@/%@/%@", self.currentBaseUrl, coordinateKey, [self remoteSuffixForType:type]];
+    NSData *pngData = [self fetchAndRender:remoteUrl type:type];
     
-    [self.diskCache writeTile:pngData forForecast:self.currentForecastKey z:z x:x y:y];
+    [self.diskCache writeTile:pngData forForecast:diskKey z:z x:x y:y];
     [self.memoryCache setObject:pngData forKey:memoryKey];
     
-    NSLog(@"[WindTileServer] 下载瓦片 %@ (%lu bytes)", coordinateKey, (unsigned long)pngData.length);
+    NSLog(@"[WindTileServer] %@ 下载瓦片 %@ (%lu bytes)", type, coordinateKey, (unsigned long)pngData.length);
     return pngData;
 }
 
-- (NSData *)fetchAndRender:(NSString *)urlString {
+- (NSData *)fetchAndRender:(NSString *)urlString type:(WeatherLayerType)type {
     NSLog(@"[DEBUG] Fetching from URL: %@", urlString);
     
     NSURL *url = [NSURL URLWithString:urlString];
@@ -261,7 +288,7 @@ static const NSInteger kMemoryCacheLimit = 64;
     CGColorSpaceRelease(csData);
     CGImageRelease(croppedImage);
     
-    // ⭐ 第四步：解码风场（裁剪后的像素，从 row 0 开始，无需跳行）
+    // ⭐ 第四步：解码气象数据（裁剪后的像素，从 row 0 开始，无需跳行）
 #if DEBUG
     // 诊断：打印裁剪后数据区的原始像素
     NSLog(@"[DEBUG] 📍 dataPixels 前5个像素值:");
@@ -274,33 +301,46 @@ static const NSInteger kMemoryCacheLimit = 64;
         NSLog(@"  [50,%d] = 0x%08X", i, dataPixels[50 * fullWidth + i]);
     }
 #endif
-    WindField *field = [WindyWindTileDecoder decodeDataPixels:dataPixels
-                                                        width:fullWidth
-                                                       height:dataHeight
-                                                       header:header];
-    free(dataPixels);
-    NSLog(@"[DEBUG] 风场解码完成");
+    uint32_t *coloredPixels = NULL;
     
+    if ([type isEqualToString:WeatherLayerTypePressure]) {
+        // 气压：R 通道编码 hPa
+        float *pressures = [WindyWindTileDecoder decodePressureDataPixels:dataPixels
+                                                                    width:fullWidth
+                                                                   height:dataHeight
+                                                                   header:header];
+        coloredPixels = [PressureColorizer colorizePressure:pressures size:256 * 256];
+        free(pressures);
+        NSLog(@"[DEBUG] 气压着色完成");
+    } else {
+        // 风场：R/G 通道编码 u/v
+        WindField *field = [WindyWindTileDecoder decodeDataPixels:dataPixels
+                                                            width:fullWidth
+                                                           height:dataHeight
+                                                           header:header];
+        
 #if DEBUG
-    // 诊断：打印解码后的 u/v 和风速
-    NSLog(@"[DEBUG] 📍 解码后前5个点 u/v/speed:");
-    for (int i = 0; i < 5; i++) {
-        float u = field->u[i];
-        float v = field->v[i];
-        if (!isnan(u) && !isnan(v)) {
-            NSLog(@"  [%d] u=%.2f v=%.2f speed=%.2f", i, u, v, sqrtf(u*u+v*v));
-        } else {
-            NSLog(@"  [%d] 缺测 NaN", i);
+        // 诊断：打印解码后的 u/v 和风速
+        NSLog(@"[DEBUG] 📍 解码后前5个点 u/v/speed:");
+        for (int i = 0; i < 5; i++) {
+            float u = field->u[i];
+            float v = field->v[i];
+            if (!isnan(u) && !isnan(v)) {
+                NSLog(@"  [%d] u=%.2f v=%.2f speed=%.2f", i, u, v, sqrtf(u*u+v*v));
+            } else {
+                NSLog(@"  [%d] 缺测 NaN", i);
+            }
         }
-    }
 #endif
-    
-    // ⭐ 第五步：Windy 色阶着色
-    uint32_t *coloredPixels = [WindSpeedColorizer colorizeField:field];
-    free(field->u);
-    free(field->v);
-    free(field);
-    
+        
+        coloredPixels = [WindSpeedColorizer colorizeField:field];
+        free(field->u);
+        free(field->v);
+        free(field);
+        NSLog(@"[DEBUG] 风场着色完成");
+    }
+    free(dataPixels);
+    NSLog(@"[DEBUG] 气象数据解码完成");
 #if DEBUG
     // 诊断：打印着色后的像素值
     NSLog(@"[DEBUG] 📍 着色后前5个像素:");

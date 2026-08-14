@@ -5,21 +5,21 @@
 
 #import "WindRasterLayerRenderer.h"
 
-static NSString *const kSourceId = @"wind-speed-tiles";
-static NSString *const kLayerId = @"wind-speed-layer";
 static NSString *const kWaterLayerId = @"water";
 static NSString *const kCoastlineLayerId = @"weather-coastline";
 static NSString *const kOpenMapTilesSourceId = @"openmaptiles";
 
 @interface WindRasterLayerRenderer ()
 @property (nonatomic, copy) NSString *tileTemplate;
+@property (nonatomic, copy) NSString *type;
 @end
 
 @implementation WindRasterLayerRenderer
 
-- (instancetype)initWithTileTemplate:(NSString *)tileTemplate {
+- (instancetype)initWithTileTemplate:(NSString *)tileTemplate type:(NSString *)type {
     if (self = [super init]) {
         _tileTemplate = tileTemplate;
+        _type = type.length > 0 ? type : @"wind";
     }
     return self;
 }
@@ -31,9 +31,12 @@ static NSString *const kOpenMapTilesSourceId = @"openmaptiles";
         return;
     }
     
+    NSString *sourceId = [NSString stringWithFormat:@"%@-tiles", self.type];
+    NSString *layerId = [NSString stringWithFormat:@"%@-layer", self.type];
+    
     // 添加栅格源
-    if (![style sourceWithIdentifier:kSourceId]) {
-        MLNRasterTileSource *source = [[MLNRasterTileSource alloc] initWithIdentifier:kSourceId
+    if (![style sourceWithIdentifier:sourceId]) {
+        MLNRasterTileSource *source = [[MLNRasterTileSource alloc] initWithIdentifier:sourceId
                                                                      tileURLTemplates:@[self.tileTemplate]
                                                                               options:@{
             MLNTileSourceOptionMinimumZoomLevel: @0,
@@ -48,9 +51,9 @@ static NSString *const kOpenMapTilesSourceId = @"openmaptiles";
     }
     
     // 添加栅格图层
-    if (![style layerWithIdentifier:kLayerId]) {
-        MLNRasterStyleLayer *windLayer = [[MLNRasterStyleLayer alloc] initWithIdentifier:kLayerId
-                                                                                   source:[style sourceWithIdentifier:kSourceId]];
+    if (![style layerWithIdentifier:layerId]) {
+        MLNRasterStyleLayer *windLayer = [[MLNRasterStyleLayer alloc] initWithIdentifier:layerId
+                                                                                   source:[style sourceWithIdentifier:sourceId]];
         windLayer.rasterOpacity = [NSExpression expressionForConstantValue:@1.0];
         windLayer.rasterResamplingMode = [NSExpression expressionForConstantValue:@"linear"];
         windLayer.rasterFadeDuration = [NSExpression expressionForConstantValue:@0.18];
@@ -78,7 +81,7 @@ static NSString *const kOpenMapTilesSourceId = @"openmaptiles";
             [style addLayer:windLayer];
         }
         
-        NSLog(@"[WindRasterLayerRenderer] 风场图层已添加");
+        NSLog(@"[WindRasterLayerRenderer] %@ 图层已添加", self.type);
     }
     
     // 添加海岸线（增强对比）
@@ -94,11 +97,30 @@ static NSString *const kOpenMapTilesSourceId = @"openmaptiles";
         coastline.lineWidth = [NSExpression expressionForConstantValue:@1.0];
         coastline.lineJoin = [NSExpression expressionForConstantValue:@"round"];
         
-        MLNStyleLayer *windLayerRef = [style layerWithIdentifier:kLayerId];
+        MLNStyleLayer *windLayerRef = [style layerWithIdentifier:layerId];
         if (windLayerRef) {
             [style insertLayer:coastline aboveLayer:windLayerRef];
         }
     }
+}
+
+- (void)removeFromMapView:(MLNMapView *)mapView {
+    MLNStyle *style = mapView.style;
+    if (!style) {
+        return;
+    }
+    NSString *layerId = [NSString stringWithFormat:@"%@-layer", self.type];
+    NSString *sourceId = [NSString stringWithFormat:@"%@-tiles", self.type];
+    
+    MLNStyleLayer *layer = [style layerWithIdentifier:layerId];
+    if (layer) {
+        [style removeLayer:layer];
+    }
+    id source = [style sourceWithIdentifier:sourceId];
+    if (source) {
+        [style removeSource:source];
+    }
+    NSLog(@"[WindRasterLayerRenderer] %@ 图层已移除", self.type);
 }
 
 - (NSInteger)indexOfLayerWithIdentifier:(NSString *)identifier inLayers:(NSArray<MLNStyleLayer *> *)layers {
