@@ -192,6 +192,22 @@ static const NSInteger kMemoryCacheLimit = 64;
         @throw [NSException exceptionWithName:@"FetchError" reason:@"无法下载图片" userInfo:nil];
     }
     
+#if DEBUG
+    // 保存原始 JPEG 到缓存文件夹，用于与渲染结果对比
+    static NSInteger _rawCount = 0;
+    if (_rawCount < 10) {
+        NSString *cacheDir = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES).firstObject;
+        NSString *rawDir = [cacheDir stringByAppendingPathComponent:@"raw_jpegs"];
+        [[NSFileManager defaultManager] createDirectoryAtPath:rawDir withIntermediateDirectories:YES attributes:nil error:nil];
+        
+        NSString *filename = [NSString stringWithFormat:@"pair_%03ld_raw.jpg", (long)_rawCount];
+        NSString *savePath = [rawDir stringByAppendingPathComponent:filename];
+        [jpegData writeToFile:savePath atomically:YES];
+        NSLog(@"[DEBUG] 📦 原始 JPEG 已保存: %@", savePath);
+        _rawCount++;
+    }
+#endif
+    
     UIImage *jpegImage = [UIImage imageWithData:jpegData];
     if (!jpegImage) {
         NSLog(@"[DEBUG] Failed to decode JPEG");
@@ -292,7 +308,7 @@ static const NSInteger kMemoryCacheLimit = 64;
         NSString *tileDir = [cacheDir stringByAppendingPathComponent:@"rendered_tiles"];
         [[NSFileManager defaultManager] createDirectoryAtPath:tileDir withIntermediateDirectories:YES attributes:nil error:nil];
         
-        NSString *filename = [NSString stringWithFormat:@"tile_%03ld.png", (long)_tileCount];
+        NSString *filename = [NSString stringWithFormat:@"pair_%03ld_rendered.png", (long)_tileCount];
         NSString *savePath = [tileDir stringByAppendingPathComponent:filename];
         [pngData writeToFile:savePath atomically:YES];
         NSLog(@"[DEBUG] 💾 瓦片已保存: %@", savePath);
