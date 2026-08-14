@@ -24,6 +24,7 @@
     
     // 启动本地瓦片服务器
     NSString *cacheDir = [NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES) firstObject];
+    NSLog(@"===本地===：%@",cacheDir);
     NSString *windCacheDir = [cacheDir stringByAppendingPathComponent:@"wind-tiles"];
     self.tileServer = [[WindTileServer alloc] initWithCacheDirectory:windCacheDir];
     NSString *tileTemplate = [self.tileServer start];

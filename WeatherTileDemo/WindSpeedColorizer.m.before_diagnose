@@ -46,46 +46,11 @@ static const NSInteger kStopsCount = sizeof(kStops) / sizeof(ColorStop);
     NSInteger size = field->width * field->height;
     uint32_t *pixels = (uint32_t *)malloc(size * sizeof(uint32_t));
     
-    // 统计变量
-    NSInteger transparentCount = 0;
-    NSInteger coloredCount = 0;
-    NSMutableDictionary<NSNumber *, NSNumber *> *colorHistogram = [NSMutableDictionary dictionary];
-    
     for (NSInteger i = 0; i < size; i++) {
         float u = field->u[i];
         float v = field->v[i];
-        
-        if (isnan(u) || isnan(v)) {
-            pixels[i] = 0x00000000;  // 透明
-            transparentCount++;
-        } else {
-            float speed = sqrtf(u * u + v * v);
-            pixels[i] = [self colorForSpeed:speed];
-            coloredCount++;
-            
-            // 统计颜色分布（取整到 RGB，忽略 Alpha）
-            uint32_t rgb = pixels[i] & 0x00FFFFFF;
-            NSNumber *key = @(rgb);
-            colorHistogram[key] = @([colorHistogram[key] integerValue] + 1);
-        }
-    }
-    
-    // 诊断日志
-    float transparentPercent = (float)transparentCount / size * 100.0f;
-    NSLog(@"[COLORIZER] 📊 着色统计:");
-    NSLog(@"[COLORIZER]   着色: %ld (%.1f%%)", (long)coloredCount, (float)coloredCount / size * 100.0f);
-    NSLog(@"[COLORIZER]   透明: %ld (%.1f%%)", (long)transparentCount, transparentPercent);
-    NSLog(@"[COLORIZER]   唯一颜色数: %lu", (unsigned long)colorHistogram.count);
-    
-    // 检测纯色问题（颜色数 < 5 表示异常）
-    if (colorHistogram.count > 0 && colorHistogram.count < 5) {
-        NSLog(@"[COLORIZER]   ⚠️  纯色瓦片！颜色分布:");
-        for (NSNumber *key in colorHistogram) {
-            uint32_t rgb = [key unsignedIntValue];
-            NSInteger count = [colorHistogram[key] integerValue];
-            NSLog(@"[COLORIZER]     RGB(0x%06X): %ld 像素 (%.1f%%)", 
-                  rgb, (long)count, (float)count / size * 100.0f);
-        }
+        float speed = sqrtf(u * u + v * v);
+        pixels[i] = [self colorForSpeed:speed];
     }
     
     return pixels;
