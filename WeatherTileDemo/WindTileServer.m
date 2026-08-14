@@ -316,9 +316,17 @@ static const NSInteger kMemoryCacheLimit = 64;
 #endif
     
     // ⭐ 第六步：输出 256x256 PNG
-    // 注意：输出时需要垂直翻转，恢复与原始图片一致的方向。
-    // 实测：读取时的翻转使 coloredPixels 相对原始图片上下颠倒，
-    // 因此 outputCtx 必须做一次对应的 Y 轴翻转来纠正。
+    // 注意：CGBitmapContextCreateImage 不受 CTM 翻转影响（直接包装像素数据），
+    // 因此必须在像素层面垂直翻转 coloredPixels，恢复与原始图片一致的方向。
+    {
+        uint32_t *flipped = (uint32_t *)malloc(256 * 256 * sizeof(uint32_t));
+        for (int y = 0; y < 256; y++) {
+            memcpy(&flipped[(255 - y) * 256], &coloredPixels[y * 256], 256 * sizeof(uint32_t));
+        }
+        memcpy(coloredPixels, flipped, 256 * 256 * sizeof(uint32_t));
+        free(flipped);
+        NSLog(@"[DEBUG] 🔄 像素已垂直翻转（恢复原始方向）");
+    }
     CGColorSpaceRef csPNG = CGColorSpaceCreateDeviceRGB();
     CGContextRef outputCtx = CGBitmapContextCreate(coloredPixels, 256, 256, 8, 256 * 4,
                                                     csPNG,
@@ -328,9 +336,6 @@ static const NSInteger kMemoryCacheLimit = 64;
         CGColorSpaceRelease(csPNG);
         @throw [NSException exceptionWithName:@"RenderError" reason:@"无法创建输出上下文" userInfo:nil];
     }
-    // 垂直翻转：让生成的 PNG 与原始 JPEG 方向一致
-    CGContextTranslateCTM(outputCtx, 0, 256);
-    CGContextScaleCTM(outputCtx, 1.0, -1.0);
     CGImageRef outputImage = CGBitmapContextCreateImage(outputCtx);
     UIImage *pngImage = [UIImage imageWithCGImage:outputImage];
     NSData *pngData = UIImagePNGRepresentation(pngImage);
