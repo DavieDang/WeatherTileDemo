@@ -204,7 +204,7 @@ static const NSInteger kMemoryCacheLimit = 64;
     
     NSLog(@"[DEBUG] JPEG size: %lux%lu", (unsigned long)width, (unsigned long)height);
     
-    // 创建位图上下文 - 使用小端序（ARGB逻辑顺序）
+    // ⭐ 创建位图上下文 - 使用默认字节序（小端序，BGRA内存布局）
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
     uint32_t *pixels = (uint32_t *)malloc(width * height * sizeof(uint32_t));
     
@@ -212,7 +212,7 @@ static const NSInteger kMemoryCacheLimit = 64;
                                                        colorSpace,
                                                        kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little);
     
-    // 翻转 Y 轴，因为 CGImage 和 CGContext 的坐标系相反
+    // ⭐ 关键：翻转 Y 轴，因为 CGImage 和 CGContext 的坐标系相反
     CGContextTranslateCTM(bitmapContext, 0, height);
     CGContextScaleCTM(bitmapContext, 1.0, -1.0);
     
@@ -220,43 +220,12 @@ static const NSInteger kMemoryCacheLimit = 64;
     CGContextRelease(bitmapContext);
     CGColorSpaceRelease(colorSpace);
     
-    NSLog(@"[DEBUG] ⭐⭐⭐ 启用完整渲染管道 ⭐⭐⭐");
-    NSLog(@"[DEBUG] 步骤: JPEG → 解码u/v → 计算风速 → Windy色阶 → 对比度增强");
+    NSLog(@"[DEBUG] Pixel buffer created (ARGB with little-endian = BGRA in memory)");
     
-    // ⭐ 步骤1: 解码风场数据（u/v分量）
-    WindField *field = [WindyWindTileDecoder decodePixels:pixels width:width height:height];
-    free(pixels);
-    
-    NSLog(@"[DEBUG] ✓ 风场解码完成: %dx%d, u范围[%.2f,%.2f], v范围[%.2f,%.2f]",
-          field->width, field->height,
-          field->width > 0 ? field->u[0] : 0.0f,
-          field->width > 0 ? field->u[field->width - 1] : 0.0f,
-          field->width > 0 ? field->v[0] : 0.0f,
-          field->width > 0 ? field->v[field->width - 1] : 0.0f);
-    
-    // 调试：打印几个风速样本
-    NSLog(@"[DEBUG] 风速样本:");
-    for (int i = 0; i < 5 && i < field->width * field->height; i++) {
-        float u = field->u[i];
-        float v = field->v[i];
-        float speed = sqrtf(u * u + v * v);
-        NSLog(@"  [%d] u=%.2f v=%.2f speed=%.2f m/s", i, u, v, speed);
-    }
-    
-    // ⭐ 步骤2: 应用Windy色阶和对比度增强
-    uint32_t *coloredPixels = [WindSpeedColorizer colorizeField:field];
-    
-    // 释放风场数据
-    free(field->u);
-    free(field->v);
-    free(field);
-    
-    NSLog(@"[DEBUG] ✓ 风速着色完成");
-    
-    // 调试：打印着色后的样本像素
-    NSLog(@"[DEBUG] 着色后像素样本 (ARGB格式):");
-    for (int i = 0; i < 5; i++) {
-        uint32_t p = coloredPixels[i];
+    // 调试：打印前3个像素
+    NSLog(@"[DEBUG] First 3 pixels (ARGB format):");
+    for (int i = 0; i < 3; i++) {
+        uint32_t p = pixels[i];
         NSLog(@"  [%d] = 0x%08X (A=%d R=%d G=%d B=%d)", 
               i, p,
               (p >> 24) & 0xFF,
@@ -265,7 +234,53 @@ static const NSInteger kMemoryCacheLimit = 64;
               p & 0xFF);
     }
     
-    // ⭐ 步骤3: 生成 PNG
+    // ⭐ 创建256x256的输出（跳过前8行，考虑Y轴翻转）
+    NSLog(@"[DEBUG] ========================================");
+    NSLog(@"[DEBUG] 🎨 使用原始颜色（跳过头部8行）");
+    NSLog(@"[DEBUG] ========================================");
+    
+    uint32_t *coloredPixels = (uint32_t *)malloc(256 * 256 * sizeof(uint32_t));
+    
+    for (int y = 0; y < 256; y++) {
+        for (int x = 0; x < 256; x++) {
+            // 因为 Y 轴翻转，从底部开始读取（跳过顶部8行和底部1行）
+            NSInteger srcRow = height - 8 - y - 1;
+            uint32_t srcPixel = pixels[srcRow * width + x];
+            
+            // ⭐ 确保 Alpha 通道为 255（完全不透明）
+            coloredPixels[y * 256 + x] = srcPixel | 0xFF000000;
+        }
+    }
+    
+    NSLog(@"[DEBUG] ✂️ 裁剪计算：height=%ld, srcRow 范围: %ld ~ %ld",
+          (long)height, (long)(height - 8 - 0 - 1), (long)(height - 8 - 255 - 1));
+    
+    // 验证原始 row 8 的像素
+    NSLog(@"[DEBUG] 原始 JPEG Row 8 (数据起点):");
+    NSInteger verifyRow = height - 8 - 1;
+    for (int i = 0; i < 3; i++) {
+        uint32_t p = pixels[verifyRow * width + i];
+        NSLog(@"  [8,%d] = 0x%08X (A=%d R=%d G=%d B=%d)", 
+              i, p,
+              (p >> 24) & 0xFF,
+              (p >> 16) & 0xFF,
+              (p >> 8) & 0xFF,
+              p & 0xFF);
+    }
+    
+    // 验证输出像素
+    NSLog(@"[DEBUG] 输出瓦片前3个像素:");
+    for (int i = 0; i < 3; i++) {
+        uint32_t p = coloredPixels[i];
+        NSLog(@"  Output[0,%d] = 0x%08X (A=%d R=%d G=%d B=%d)", 
+              i, p,
+              (p >> 24) & 0xFF,
+              (p >> 16) & 0xFF,
+              (p >> 8) & 0xFF,
+              p & 0xFF);
+    }
+    
+    // ⭐ 生成 PNG - 使用相同的格式
     CGColorSpaceRef colorSpacePNG = CGColorSpaceCreateDeviceRGB();
     CGContextRef outputContext = CGBitmapContextCreate(coloredPixels, 256, 256, 8,
                                                        256 * 4, colorSpacePNG,
@@ -273,6 +288,7 @@ static const NSInteger kMemoryCacheLimit = 64;
     
     if (!outputContext) {
         NSLog(@"[ERROR] Failed to create output context!");
+        free(pixels);
         free(coloredPixels);
         CGColorSpaceRelease(colorSpacePNG);
         @throw [NSException exceptionWithName:@"RenderError" reason:@"无法创建输出上下文" userInfo:nil];
@@ -286,10 +302,10 @@ static const NSInteger kMemoryCacheLimit = 64;
     CGImageRelease(outputImage);
     CGContextRelease(outputContext);
     CGColorSpaceRelease(colorSpacePNG);
+    free(pixels);
     free(coloredPixels);
     
-    NSLog(@"[DEBUG] ✓ PNG生成完成: %lu bytes", (unsigned long)pngData.length);
-    NSLog(@"[DEBUG] ==========================================");
+    NSLog(@"[DEBUG] PNG generated: %lu bytes", (unsigned long)pngData.length);
     
     return pngData;
 }
