@@ -202,9 +202,15 @@ static const NSInteger kMemoryCacheLimit = 64;
     size_t width = CGImageGetWidth(cgImage);
     size_t height = CGImageGetHeight(cgImage);
     
+    // 诊断：检查 JPEG 尺寸
+    if (width != 257 || height != 265) {
+        NSLog(@"[WindTileServer] ⚠️  异常 JPEG 尺寸: %ldx%ld (期望 257x265)", (long)width, (long)height);
+    }
+    
     NSLog(@"[DEBUG] JPEG size: %lux%lu", (unsigned long)width, (unsigned long)height);
     
-    // 创建位图上下文 - 使用小端序（ARGB逻辑顺序）
+    // ⭐ 创建位图上下文 - 必须翻转 Y 轴
+    // 这样 pixels[0] = JPEG row 0, pixels[4*w] = JPEG row 4（头部）
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
     uint32_t *pixels = (uint32_t *)malloc(width * height * sizeof(uint32_t));
     
@@ -212,7 +218,7 @@ static const NSInteger kMemoryCacheLimit = 64;
                                                        colorSpace,
                                                        kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little);
     
-    // 翻转 Y 轴，因为 CGImage 和 CGContext 的坐标系相反
+    // ✅ 翻转 Y 轴 - 让 pixels 的 row 顺序与 JPEG 一致（row 0 = 顶部）
     CGContextTranslateCTM(bitmapContext, 0, height);
     CGContextScaleCTM(bitmapContext, 1.0, -1.0);
     
@@ -222,25 +228,27 @@ static const NSInteger kMemoryCacheLimit = 64;
     
     NSLog(@"[DEBUG] ⭐⭐⭐ 启用完整渲染管道 ⭐⭐⭐");
     NSLog(@"[DEBUG] 步骤: JPEG → 解码u/v → 计算风速 → Windy色阶 → 对比度增强");
+    NSLog(@"[DEBUG] ✅ Y 轴已翻转，pixels[4*w]=头部行，pixels[8*w]=数据第一行");
     
     // ⭐ 步骤1: 解码风场数据（u/v分量）
+//    NSLog(@"[WindTileServer] ═══ 瓦片 %ld/%ld/%ld 解码开始 ═══", (long)z, (long)x, (long)y);
     WindField *field = [WindyWindTileDecoder decodePixels:pixels width:width height:height];
     free(pixels);
     
-    NSLog(@"[DEBUG] ✓ 风场解码完成: %dx%d, u范围[%.2f,%.2f], v范围[%.2f,%.2f]",
-          field->width, field->height,
-          field->width > 0 ? field->u[0] : 0.0f,
-          field->width > 0 ? field->u[field->width - 1] : 0.0f,
-          field->width > 0 ? field->v[0] : 0.0f,
-          field->width > 0 ? field->v[field->width - 1] : 0.0f);
+    NSLog(@"[DEBUG] ✓ 风场解码完成: %dx%d",
+          field->width, field->height);
     
     // 调试：打印几个风速样本
-    NSLog(@"[DEBUG] 风速样本:");
+    NSLog(@"[DEBUG] 风速样本 (前5个点):");
     for (int i = 0; i < 5 && i < field->width * field->height; i++) {
         float u = field->u[i];
         float v = field->v[i];
-        float speed = sqrtf(u * u + v * v);
-        NSLog(@"  [%d] u=%.2f v=%.2f speed=%.2f m/s", i, u, v, speed);
+        if (!isnan(u) && !isnan(v)) {
+            float speed = sqrtf(u * u + v * v);
+            NSLog(@"  [%d] u=%.2f v=%.2f speed=%.2f m/s", i, u, v, speed);
+        } else {
+            NSLog(@"  [%d] 缺测 (NaN)", i);
+        }
     }
     
     // ⭐ 步骤2: 应用Windy色阶和对比度增强
@@ -254,8 +262,8 @@ static const NSInteger kMemoryCacheLimit = 64;
     NSLog(@"[DEBUG] ✓ 风速着色完成");
     
     // 调试：打印着色后的样本像素
-    NSLog(@"[DEBUG] 着色后像素样本 (ARGB格式):");
-    for (int i = 0; i < 5; i++) {
+    NSLog(@"[DEBUG] 着色后像素样本 (ARGB格式，前3个点):");
+    for (int i = 0; i < 3; i++) {
         uint32_t p = coloredPixels[i];
         NSLog(@"  [%d] = 0x%08X (A=%d R=%d G=%d B=%d)", 
               i, p,
