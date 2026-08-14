@@ -260,10 +260,9 @@ static const NSInteger kMemoryCacheLimit = 64;
     free(field);
     
     // ⭐ 第六步：输出 256x256 PNG
-    // 注意：这里【不需要】再翻转 Y 轴。
-    // 方向链条：UIImage.CGImage 像素存储与视觉方向相反（row 0 = 视觉底部），
-    // 读取时 headerCtx/dataCtx 的翻转恰好把裁剪后的数据区纠正为正立，
-    // 因此 coloredPixels row 0 = 数据区视觉顶部。若在此再加翻转，瓦片会上下颠倒。
+    // 注意：输出时需要垂直翻转，恢复与原始图片一致的方向。
+    // 实测：读取时的翻转使 coloredPixels 相对原始图片上下颠倒，
+    // 因此 outputCtx 必须做一次对应的 Y 轴翻转来纠正。
     CGColorSpaceRef csPNG = CGColorSpaceCreateDeviceRGB();
     CGContextRef outputCtx = CGBitmapContextCreate(coloredPixels, 256, 256, 8, 256 * 4,
                                                     csPNG,
@@ -273,6 +272,9 @@ static const NSInteger kMemoryCacheLimit = 64;
         CGColorSpaceRelease(csPNG);
         @throw [NSException exceptionWithName:@"RenderError" reason:@"无法创建输出上下文" userInfo:nil];
     }
+    // 垂直翻转：让生成的 PNG 与原始 JPEG 方向一致
+    CGContextTranslateCTM(outputCtx, 0, 256);
+    CGContextScaleCTM(outputCtx, 1.0, -1.0);
     CGImageRef outputImage = CGBitmapContextCreateImage(outputCtx);
     UIImage *pngImage = [UIImage imageWithCGImage:outputImage];
     NSData *pngData = UIImagePNGRepresentation(pngImage);
