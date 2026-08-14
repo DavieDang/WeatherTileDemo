@@ -198,106 +198,103 @@ static const NSInteger kMemoryCacheLimit = 64;
         @throw [NSException exceptionWithName:@"DecodeError" reason:@"无法解码图片" userInfo:nil];
     }
     
-    CGImageRef cgImage = jpegImage.CGImage;
-    size_t width = CGImageGetWidth(cgImage);
-    size_t height = CGImageGetHeight(cgImage);
+    CGImageRef fullImage = jpegImage.CGImage;
+    size_t fullWidth  = CGImageGetWidth(fullImage);
+    size_t fullHeight = CGImageGetHeight(fullImage);
+    NSLog(@"[DEBUG] JPEG 原始尺寸: %ldx%ld", (unsigned long)fullWidth, (unsigned long)fullHeight);
     
-    // 诊断：检查 JPEG 尺寸
-    if (width != 257 || height != 265) {
-        NSLog(@"[WindTileServer] ⚠️  异常 JPEG 尺寸: %ldx%ld (期望 257x265)", (long)width, (long)height);
-    }
+    // ⭐ 第一步：解码头部（需要完整 257x265，读 row 4 的编码）
+    static const NSInteger kHeaderRows = 8;
+    CGColorSpaceRef csHeader = CGColorSpaceCreateDeviceRGB();
+    uint32_t *fullPixels = (uint32_t *)malloc(fullWidth * fullHeight * sizeof(uint32_t));
+    CGContextRef headerCtx = CGBitmapContextCreate(fullPixels, fullWidth, fullHeight, 8,
+                                                    fullWidth * 4, csHeader,
+                                                    kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little);
+    CGContextTranslateCTM(headerCtx, 0, fullHeight);
+    CGContextScaleCTM(headerCtx, 1.0, -1.0);
+    CGContextDrawImage(headerCtx, CGRectMake(0, 0, fullWidth, fullHeight), fullImage);
+    CGContextRelease(headerCtx);
+    CGColorSpaceRelease(csHeader);
     
-    NSLog(@"[DEBUG] JPEG size: %lux%lu", (unsigned long)width, (unsigned long)height);
+    // 从完整像素中解码头部参数
+    WindFieldHeader header = [WindyWindTileDecoder decodeHeaderFromPixels:fullPixels width:fullWidth];
+    free(fullPixels);
+    NSLog(@"[DEBUG] 头部解码: rMin=%.2f rMax=%.2f gMin=%.2f gMax=%.2f",
+          header.rMin, header.rMax, header.gMin, header.gMax);
     
-    // ⭐ 创建位图上下文 - 必须翻转 Y 轴
-    // 这样 pixels[0] = JPEG row 0, pixels[4*w] = JPEG row 4（头部）
-    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-    uint32_t *pixels = (uint32_t *)malloc(width * height * sizeof(uint32_t));
+    // ⭐ 第二步：裁剪掉头部色条
+    // CGImage 坐标系：Y 轴从底部开始（y=0 是图片底部）
+    // JPEG 布局：row 0-7 色条，row 8-264 数据
+    // CGImage 布局：y=264 对应 JPEG row 0，y=0 对应 JPEG row 264
+    // 要裁掉 JPEG row 0-7（CGImage y=257-264），保留 row 8-264（CGImage y=0-256）
+    NSInteger dataHeight = (NSInteger)fullHeight - kHeaderRows;  // 265-8=257
+    CGRect dataRect = CGRectMake(0, kHeaderRows, fullWidth, dataHeight);  // y=8, height=257
+    CGImageRef croppedImage = CGImageCreateWithImageInRect(fullImage, dataRect);
+    NSLog(@"[DEBUG] 裁剪后尺寸: %ldx%ld（已去除 %ld 行色条，裁剪矩形 y=%ld h=%ld）",
+          (unsigned long)fullWidth, (unsigned long)dataHeight, (long)kHeaderRows,
+          (long)kHeaderRows, (long)dataHeight);
     
-    CGContextRef bitmapContext = CGBitmapContextCreate(pixels, width, height, 8, width * 4,
-                                                       colorSpace,
-                                                       kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little);
+    // ⭐ 第三步：把裁剪后的数据区（257x257）渲染到像素数组
+    CGColorSpaceRef csData = CGColorSpaceCreateDeviceRGB();
+    uint32_t *dataPixels = (uint32_t *)malloc(fullWidth * dataHeight * sizeof(uint32_t));
+    CGContextRef dataCtx = CGBitmapContextCreate(dataPixels, fullWidth, dataHeight, 8,
+                                                  fullWidth * 4, csData,
+                                                  kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little);
+    CGContextTranslateCTM(dataCtx, 0, dataHeight);
+    CGContextScaleCTM(dataCtx, 1.0, -1.0);
+    CGContextDrawImage(dataCtx, CGRectMake(0, 0, fullWidth, dataHeight), croppedImage);
+    CGContextRelease(dataCtx);
+    CGColorSpaceRelease(csData);
+    CGImageRelease(croppedImage);
     
-    // ✅ 翻转 Y 轴 - 让 pixels 的 row 顺序与 JPEG 一致（row 0 = 顶部）
-    CGContextTranslateCTM(bitmapContext, 0, height);
-    CGContextScaleCTM(bitmapContext, 1.0, -1.0);
+    // ⭐ 第四步：解码风场（裁剪后的像素，从 row 0 开始，无需跳行）
+    WindField *field = [WindyWindTileDecoder decodeDataPixels:dataPixels
+                                                        width:fullWidth
+                                                       height:dataHeight
+                                                       header:header];
+    free(dataPixels);
+    NSLog(@"[DEBUG] 风场解码完成");
     
-    CGContextDrawImage(bitmapContext, CGRectMake(0, 0, width, height), cgImage);
-    CGContextRelease(bitmapContext);
-    CGColorSpaceRelease(colorSpace);
-    
-    NSLog(@"[DEBUG] ⭐⭐⭐ 启用完整渲染管道 ⭐⭐⭐");
-    NSLog(@"[DEBUG] 步骤: JPEG → 解码u/v → 计算风速 → Windy色阶 → 对比度增强");
-    NSLog(@"[DEBUG] ✅ Y 轴已翻转，pixels[4*w]=头部行，pixels[8*w]=数据第一行");
-    
-    // ⭐ 步骤1: 解码风场数据（u/v分量）
-//    NSLog(@"[WindTileServer] ═══ 瓦片 %ld/%ld/%ld 解码开始 ═══", (long)z, (long)x, (long)y);
-    WindField *field = [WindyWindTileDecoder decodePixels:pixels width:width height:height];
-    free(pixels);
-    
-    NSLog(@"[DEBUG] ✓ 风场解码完成: %dx%d",
-          field->width, field->height);
-    
-    // 调试：打印几个风速样本
-    NSLog(@"[DEBUG] 风速样本 (前5个点):");
-    for (int i = 0; i < 5 && i < field->width * field->height; i++) {
-        float u = field->u[i];
-        float v = field->v[i];
-        if (!isnan(u) && !isnan(v)) {
-            float speed = sqrtf(u * u + v * v);
-            NSLog(@"  [%d] u=%.2f v=%.2f speed=%.2f m/s", i, u, v, speed);
-        } else {
-            NSLog(@"  [%d] 缺测 (NaN)", i);
-        }
-    }
-    
-    // ⭐ 步骤2: 应用Windy色阶和对比度增强
+    // ⭐ 第五步：Windy 色阶着色
     uint32_t *coloredPixels = [WindSpeedColorizer colorizeField:field];
-    
-    // 释放风场数据
     free(field->u);
     free(field->v);
     free(field);
     
-    NSLog(@"[DEBUG] ✓ 风速着色完成");
-    
-    // 调试：打印着色后的样本像素
-    NSLog(@"[DEBUG] 着色后像素样本 (ARGB格式，前3个点):");
-    for (int i = 0; i < 3; i++) {
-        uint32_t p = coloredPixels[i];
-        NSLog(@"  [%d] = 0x%08X (A=%d R=%d G=%d B=%d)", 
-              i, p,
-              (p >> 24) & 0xFF,
-              (p >> 16) & 0xFF,
-              (p >> 8) & 0xFF,
-              p & 0xFF);
-    }
-    
-    // ⭐ 步骤3: 生成 PNG
-    CGColorSpaceRef colorSpacePNG = CGColorSpaceCreateDeviceRGB();
-    CGContextRef outputContext = CGBitmapContextCreate(coloredPixels, 256, 256, 8,
-                                                       256 * 4, colorSpacePNG,
-                                                       kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little);
-    
-    if (!outputContext) {
-        NSLog(@"[ERROR] Failed to create output context!");
+    // ⭐ 第六步：输出 256x256 PNG
+    CGColorSpaceRef csPNG = CGColorSpaceCreateDeviceRGB();
+    CGContextRef outputCtx = CGBitmapContextCreate(coloredPixels, 256, 256, 8, 256 * 4,
+                                                    csPNG,
+                                                    kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little);
+    if (!outputCtx) {
         free(coloredPixels);
-        CGColorSpaceRelease(colorSpacePNG);
+        CGColorSpaceRelease(csPNG);
         @throw [NSException exceptionWithName:@"RenderError" reason:@"无法创建输出上下文" userInfo:nil];
     }
-    
-    CGImageRef outputImage = CGBitmapContextCreateImage(outputContext);
+    CGImageRef outputImage = CGBitmapContextCreateImage(outputCtx);
     UIImage *pngImage = [UIImage imageWithCGImage:outputImage];
     NSData *pngData = UIImagePNGRepresentation(pngImage);
-    
-    // 清理资源
     CGImageRelease(outputImage);
-    CGContextRelease(outputContext);
-    CGColorSpaceRelease(colorSpacePNG);
+    CGContextRelease(outputCtx);
+    CGColorSpaceRelease(csPNG);
     free(coloredPixels);
+    NSLog(@"[DEBUG] PNG 生成完成: %lu bytes", (unsigned long)pngData.length);
     
-    NSLog(@"[DEBUG] ✓ PNG生成完成: %lu bytes", (unsigned long)pngData.length);
-    NSLog(@"[DEBUG] ==========================================");
+#if DEBUG
+    // 保存生成的瓦片到缓存文件夹，方便检查是否有色条
+    static NSInteger _tileCount = 0;
+    if (_tileCount < 10) {
+        NSString *cacheDir = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES).firstObject;
+        NSString *tileDir = [cacheDir stringByAppendingPathComponent:@"rendered_tiles"];
+        [[NSFileManager defaultManager] createDirectoryAtPath:tileDir withIntermediateDirectories:YES attributes:nil error:nil];
+        
+        NSString *filename = [NSString stringWithFormat:@"tile_%03ld.png", (long)_tileCount];
+        NSString *savePath = [tileDir stringByAppendingPathComponent:filename];
+        [pngData writeToFile:savePath atomically:YES];
+        NSLog(@"[DEBUG] 💾 瓦片已保存: %@", savePath);
+        _tileCount++;
+    }
+#endif
     
     return pngData;
 }
