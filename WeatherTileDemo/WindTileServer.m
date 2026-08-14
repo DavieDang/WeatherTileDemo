@@ -223,16 +223,15 @@ static const NSInteger kMemoryCacheLimit = 64;
           header.rMin, header.rMax, header.gMin, header.gMax);
     
     // ⭐ 第二步：裁剪掉头部色条
-    // CGImage 坐标系：Y 轴从底部开始（y=0 是图片底部）
-    // JPEG 布局：row 0-7 色条，row 8-264 数据
-    // CGImage 布局：y=264 对应 JPEG row 0，y=0 对应 JPEG row 264
-    // 要裁掉 JPEG row 0-7（CGImage y=257-264），保留 row 8-264（CGImage y=0-256）
+    // CGImage 坐标系：Y 轴向上（原点在左下角，y=0 是图片底部）
+    // JPEG 布局：row 0-7 色条（顶部），row 8-264 数据区
+    // CGImage 映射：y=264 对应 JPEG row 0（色条），y=0 对应 JPEG row 264（数据底部）
+    // 因此保留底部 y=0..256（JPEG row 8-264 数据区），顶部色条 y=257..264 被裁掉
     NSInteger dataHeight = (NSInteger)fullHeight - kHeaderRows;  // 265-8=257
-    CGRect dataRect = CGRectMake(0, kHeaderRows, fullWidth, dataHeight);  // y=8, height=257
+    CGRect dataRect = CGRectMake(0, 0, fullWidth, dataHeight);   // 从 y=0 开始保留 257 行
     CGImageRef croppedImage = CGImageCreateWithImageInRect(fullImage, dataRect);
-    NSLog(@"[DEBUG] 裁剪后尺寸: %ldx%ld（已去除 %ld 行色条，裁剪矩形 y=%ld h=%ld）",
-          (unsigned long)fullWidth, (unsigned long)dataHeight, (long)kHeaderRows,
-          (long)kHeaderRows, (long)dataHeight);
+    NSLog(@"[DEBUG] 裁剪后尺寸: %ldx%ld（已裁掉顶部 %ld 行色条）",
+          (unsigned long)fullWidth, (unsigned long)dataHeight, (long)kHeaderRows);
     
     // ⭐ 第三步：把裁剪后的数据区（257x257）渲染到像素数组
     CGColorSpaceRef csData = CGColorSpaceCreateDeviceRGB();
