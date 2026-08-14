@@ -147,12 +147,18 @@ typedef struct {
     header.gMax = values[3];
     
     
-    // 检查头部值是否有效（风速物理上限 ~100 m/s，防止垃圾范围通过 rMax>rMin 校验）
-    static const float kMaxWindSpeed = 100.0f;
-    BOOL valid = isfinite(header.rMin) && isfinite(header.rMax) && header.rMax > header.rMin &&
-                 isfinite(header.gMin) && isfinite(header.gMax) && header.gMax > header.gMin &&
-                 fabsf(header.rMin) < kMaxWindSpeed && fabsf(header.rMax) < kMaxWindSpeed &&
-                 fabsf(header.gMin) < kMaxWindSpeed && fabsf(header.gMax) < kMaxWindSpeed;
+    // 通用头部有效性校验：
+    // - isfinite 排除 NaN/Inf
+    // - R 或 G 至少一个通道有效：标量类型（气压）只用 R 通道（gMin=gMax=0），
+    //   矢量类型（风场）要求双通道
+    // - 量级上限 1e9：拦截无意义的超大垃圾值（如 1e15），
+    //   同时允许不同气象类型的量级差异（风场 ~20 m/s，气压 hPa×100 编码 ~1e5）
+    static const float kMaxHeaderMagnitude = 1e9f;
+    BOOL valid = isfinite(header.rMin) && isfinite(header.rMax) &&
+                 isfinite(header.gMin) && isfinite(header.gMax) &&
+                 (header.rMax > header.rMin || header.gMax > header.gMin) &&
+                 fabsf(header.rMin) < kMaxHeaderMagnitude && fabsf(header.rMax) < kMaxHeaderMagnitude &&
+                 fabsf(header.gMin) < kMaxHeaderMagnitude && fabsf(header.gMax) < kMaxHeaderMagnitude;
     
     if (!valid) {
         NSLog(@"[DECODER] ⚠️  头部解析失败（rMin=%.2f rMax=%.2f gMin=%.2f gMax=%.2f），使用默认范围",
