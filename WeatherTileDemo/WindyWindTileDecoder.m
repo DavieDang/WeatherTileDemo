@@ -147,9 +147,12 @@ typedef struct {
     header.gMax = values[3];
     
     
-    // 检查头部值是否有效
+    // 检查头部值是否有效（风速物理上限 ~100 m/s，防止垃圾范围通过 rMax>rMin 校验）
+    static const float kMaxWindSpeed = 100.0f;
     BOOL valid = isfinite(header.rMin) && isfinite(header.rMax) && header.rMax > header.rMin &&
-                 isfinite(header.gMin) && isfinite(header.gMax) && header.gMax > header.gMin;
+                 isfinite(header.gMin) && isfinite(header.gMax) && header.gMax > header.gMin &&
+                 fabsf(header.rMin) < kMaxWindSpeed && fabsf(header.rMax) < kMaxWindSpeed &&
+                 fabsf(header.gMin) < kMaxWindSpeed && fabsf(header.gMax) < kMaxWindSpeed;
     
     if (!valid) {
         NSLog(@"[DECODER] ⚠️  头部解析失败（rMin=%.2f rMax=%.2f gMin=%.2f gMax=%.2f），使用默认范围",

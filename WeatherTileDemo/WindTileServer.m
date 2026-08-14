@@ -226,8 +226,8 @@ static const NSInteger kMemoryCacheLimit = 64;
     CGContextRef headerCtx = CGBitmapContextCreate(fullPixels, fullWidth, fullHeight, 8,
                                                     fullWidth * 4, csHeader,
                                                     kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little);
-    CGContextTranslateCTM(headerCtx, 0, fullHeight);
-    CGContextScaleCTM(headerCtx, 1.0, -1.0);
+    // ⚠️ 不能翻转！UIImage.CGImage 的像素存储本身是颠倒的（row 0 = 视觉底部），
+    // 若再翻转，fullPixels 的 row 4 会指向数据区而不是头部编码行，导致头部解析出垃圾值。
     CGContextDrawImage(headerCtx, CGRectMake(0, 0, fullWidth, fullHeight), fullImage);
     CGContextRelease(headerCtx);
     CGColorSpaceRelease(csHeader);
